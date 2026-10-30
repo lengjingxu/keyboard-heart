@@ -8,11 +8,24 @@
 
 ## 支持设备
 
+设备支持由 `profiles/` 数据文件驱动（[贡献指南](docs/CONTRIBUTING-PROFILES.md)），新增键盘不需要改代码。
+
+**已验证**
+
 | 键盘 | USB ID | 状态 |
 |---|---|---|
-| MCHOSE Ace 68 Air 2（有线） | `0x3837:0x300A` | ✅ 全键位实测 |
-| MCHOSE Ace 68（有线） | `0x41E4:0x2116` | 社区表，未实测 |
-| MCHOSE Ace 68（顺序 LED 变体） | `0x41E4:0x2114` | 备用表 |
+| MCHOSE Ace 68 Air 2（有线） | `0x3837:0x300A` | ✅ 全键位真机实测 |
+
+**社区表**（即插即用，未经真机确认）
+
+| 键盘 | USB ID | 来源 |
+|---|---|---|
+| MCHOSE Ace 68（有线） | `0x41E4:0x2116` | SignalRGB 社区插件 |
+| MCHOSE Ace 68（顺序 LED 变体） | `0x41E4:0x2114` | 社区 PR |
+
+**候选**（9 款 ace68 家族变体：air ii/iii、gt、i、iii、pro、turbo 8k/16k、v2 iii）——键位表已从厂商控制台资产自动提取，等有对应设备的贡献者确认 PID 并校准；`kbctl doctor` 会列出。同方法还适用于 ace60/ace75/g87/g75 等 22 款（需先贡献对应尺寸的 layout）。
+
+更远的目标：通过 [SignalRGB 插件导入器](tools/signalrgb-import.js)（已验证 68/68 一致）接入社区已逆向的键盘（AULA、Ajazz、Redragon 等），以及 VIA/QMK 标准协议与 OpenRGB SDK 后端。
 
 ⚠️ 仅 USB 有线模式；2.4G/蓝牙接收器不暴露灯控接口。
 

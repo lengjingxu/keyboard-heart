@@ -44,7 +44,15 @@ async function doctor() {
   }
   for (const d of list) {
     const p = known.find(p => p.vendorId === d.vendorId && p.productId === d.productId);
-    console.log(`✔ ${p.name} found: ${d.product || '?'}  interface ${d.interface}  path ${d.path}`);
+    const badge = p.verified ? '' : '  [unverified profile]';
+    console.log(`✔ ${p.name}${badge} found: ${d.product || '?'}  interface ${d.interface}`);
+  }
+  const { PROFILE_CANDIDATES } = require('../lib/grid');
+  const cands = Object.values(PROFILE_CANDIDATES);
+  if (cands.length) {
+    console.log(`ℹ ${cands.length} candidate profiles await real-device confirmation:`);
+    for (const c of cands) console.log(`   · ${c.name} (${c.id}) — needs PID + calibration`);
+    console.log('   see docs/CONTRIBUTING-PROFILES.md to adopt one');
   }
   console.log('✔ node-hid OK, protocol lib loaded');
   console.log('Next: npm start  →  then kbctl fx success');
