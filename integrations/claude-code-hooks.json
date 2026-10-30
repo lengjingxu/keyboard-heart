@@ -1,0 +1,19 @@
+{
+  "//": "Claude Code hooks for keyboard-heart. Merge into ~/.claude/settings.json (or .claude/settings.json for one project). Stop = Claude finished responding; Notification = Claude needs your attention (permission prompt / waiting for input).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "curl -s -X POST http://127.0.0.1:8791/fx/success >/dev/null 2>&1 || true" }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          { "type": "command", "command": "curl -s -X POST http://127.0.0.1:8791/fx/needInput >/dev/null 2>&1 || true" }
+        ]
+      }
+    ]
+  }
+}

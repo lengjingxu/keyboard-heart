@@ -107,12 +107,37 @@ kbctl doctor               # 不需要服务，直接探测设备
 
 KB_HOST/KB_PORT 环境变量可指向远程服务。
 
-## 在 ZCode / 自动化里用
+## 接入 AI 编码工具
 
-任务收尾时一行调用（把 success 换成对应结果）：
+两条路线可以叠加：**hooks 自动触发**（工具生命周期事件直连灯光，AI 无感知）+ **提示词驱动**（写进 CLAUDE.md/AGENTS.md，AI 按任务状态自主调用）。
+
+### Claude Code（hooks 自动触发）
+
+把 `integrations/claude-code-hooks.json` 的内容合并进 `~/.claude/settings.json`（或项目级 `.claude/settings.json`），也可在 Claude Code 里运行 `/hooks` 可视化添加：
+
+- `Stop`（Claude 完成响应）→ `fx success`
+- `Notification`（请求权限/等待输入）→ `fx needInput`
+
+### Codex CLI（notify 桥接）
+
+在 `~/.codex/config.toml` 里加一行（绝对路径）：
+
+```toml
+notify = ["/absolute/path/to/keyboard-heart/integrations/codex-notify.sh"]
+```
+
+桥接脚本会解析事件：任务轮完成 → `success`，请求批准 → `needInput`，其余 → `notify`。
+
+### 提示词驱动（任何支持 CLAUDE.md / AGENTS.md 的 agent）
+
+把 `integrations/agent-prompt.md` 的内容贴进项目的 CLAUDE.md / AGENTS.md，AI 就会自主在长任务开始时打 `processing`、完成时打 `success/failure`、需要输入时打 `needInput`。
+
+### ZCode / 任意自动化
+
+一行 curl 即可（PostToolUse hook、workflow、cron 均可）：
 
 ```bash
-curl -X POST localhost:8790/fx/success    # ZCode hook / automation 的 PostToolUse
+curl -X POST localhost:8791/fx/success
 ```
 
 长任务的推荐姿势：开始时 `processing`，结束时 `success` 或 `failure`。
