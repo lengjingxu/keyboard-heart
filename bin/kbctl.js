@@ -13,7 +13,7 @@
 const os = require('node:os');
 
 const HOST = process.env.KB_HOST || '127.0.0.1';
-const PORT = process.env.KB_PORT || '8790';
+const PORT = process.env.KB_PORT || '8791';
 const BASE = `http://${HOST}:${PORT}`;
 
 async function call(method, path, body) {

@@ -25,7 +25,7 @@ npm install
 # 1. 自检：找到键盘、验证权限
 npm run doctor
 
-# 2. 起服务（默认 127.0.0.1:8790，仅本机可访问）
+# 2. 起服务（默认 127.0.0.1:8791，仅本机可访问）
 npm start
 
 # 3. 播放
@@ -60,7 +60,7 @@ kbctl fx success
 
 ## API
 
-### REST（默认 `http://127.0.0.1:8790`）
+### REST（默认 `http://127.0.0.1:8791`）
 
 ```bash
 curl -X POST localhost:8790/fx/success          # 播放预设
@@ -84,7 +84,7 @@ curl localhost:8790/health                      # 设备在线状态
 ### WebSocket（自由发挥动画）
 
 ```js
-const ws = new WebSocket('ws://127.0.0.1:8790/stream');
+const ws = new WebSocket('ws://127.0.0.1:8791/stream');
 setInterval(() => {
   ws.send(JSON.stringify({ op: 'frame', keys: { Q: '#ff2020' } }));  // 每帧合并进静态帧，服务端 20fps 持续推流
 }, 50);

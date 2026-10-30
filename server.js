@@ -13,7 +13,7 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const { Scheduler } = require('./lib/scheduler');
 
-const PORT = parseInt(process.env.KB_PORT || '8790');
+const PORT = parseInt(process.env.KB_PORT || '8791');
 const HOST = process.env.KB_HOST || '127.0.0.1';
 
 const scheduler = new Scheduler({
