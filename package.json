@@ -1,0 +1,22 @@
+{
+  "name": "keyboard-heart",
+  "version": "0.1.0",
+  "description": "Local service that turns MCHOSE 65% keyboard RGB into an API: preset notifications (success/failure/need-input) + per-key control via REST and WebSocket.",
+  "main": "server.js",
+  "bin": {
+    "kbctl": "bin/kbctl.js",
+    "keyboard-heart": "server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "doctor": "node bin/kbctl.js doctor",
+    "cli": "node heart.js"
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "node-hid": "^3.4.0",
+    "ws": "^8.22.0"
+  }
+}
