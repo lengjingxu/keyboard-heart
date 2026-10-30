@@ -47,7 +47,7 @@ node tools/signalrgb-import.js \
 
 ### 路线 C：都没有 → 手工校准
 
-1. 用 `system_profiler SPUSBDataType`（macOS）拿到 VID/PID
+1. 用 `kbctl doctor --issue` 生成含本机 HID 信息的 issue 草稿（内含 VID/PID）
 2. 手写一张全 `-1` 的候选 profile（可以先只填 guess）
 3. 点亮全板彩虹并逐键记录：`node heart.js rainbow` 配合拍照，或用 WS 通道逐槽点亮
 4. 填好 `table` 后用 `node heart.js heart` 验证

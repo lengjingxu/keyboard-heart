@@ -30,7 +30,49 @@ async function call(method, path, body) {
   return out;
 }
 
-async function doctor() {
+function issueDraft(HID) {
+  // one-command GitHub issue draft for requesting/adding a device profile
+  const { PROFILES, PROFILE_CANDIDATES } = require('../lib/grid');
+  const skip = /apple|trackpad|mouse|receiver|sensor|hub|headset/i;
+  const devices = HID.devices().filter(d =>
+    d.product && !skip.test(d.product) && d.vendorId !== 0 && d.interface >= 0);
+  const seen = new Set();
+  const rows = devices
+    .filter(d => { const k = `${d.vendorId}:${d.productId}:${d.interface}`; if (seen.has(k)) return false; seen.add(k); return true; })
+    .map(d => `| ${d.product} | \`${d.vendorId.toString(16)}:${d.productId.toString(16)}\` | ${d.interface} |`)
+    .join('\n');
+  const cands = Object.values(PROFILE_CANDIDATES)
+    .map(c => `- ${c.name} (\`${c.id}\`)`)
+    .join('\n');
+  console.log(`
+---- GitHub issue 草稿（复制到 https://github.com/lengjingxu/keyboard-heart/issues/new，选 Device support）----
+
+### 设备支持请求 / Device support request
+
+**键盘型号**：<!-- 填写，如 MCHOSE Ace 68 Pro -->
+**连接方式**：USB 有线
+**想贡献**：<!-- 拥有该键盘，愿意校准 | 只是请求，没有设备 -->
+
+<details><summary>本机 HID 设备列表（kbctl doctor --issue 自动生成）</summary>
+
+| product | VID:PID | HID interface |
+|---|---|---|
+${rows}
+
+</details>
+
+**候选 profile 认领**（如有你的型号，直接说"认领 <id>"并按指南校准）：
+${cands || '- （暂无候选）'}
+
+**已尝试**：
+- [ ] \`npm run doctor\` 输出粘贴在上方
+- [ ] \`node heart.js rainbow\` 彩虹校准照片（贡献 table 时必须）
+
+参考：docs/CONTRIBUTING-PROFILES.md
+---- 草稿结束 ----`);
+}
+
+async function doctor(issueFlag = false) {
   const HID = require('node-hid');
   const { PROFILES } = require('../lib/grid');
   const known = Object.values(PROFILES);
@@ -40,6 +82,7 @@ async function doctor() {
     console.error('✖ no supported keyboard found. Supported:');
     for (const p of known) console.error(`   ${p.name}  USB ${p.vendorId.toString(16)}:${p.productId.toString(16)} (HID interface ${p.interface})`);
     console.error('   Plug the board in via USB cable and retry. Note: 2.4G/BT dongles are not supported.');
+    if (issueFlag) issueDraft(HID);
     process.exit(1);
   }
   for (const d of list) {
@@ -56,11 +99,12 @@ async function doctor() {
   }
   console.log('✔ node-hid OK, protocol lib loaded');
   console.log('Next: npm start  →  then kbctl fx success');
+  if (issueFlag) issueDraft(HID);
 }
 
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);
-  if (cmd === 'doctor') return doctor();
+  if (cmd === 'doctor') return doctor(process.argv.includes('--issue'));
   if (!cmd) return console.error('usage: kbctl <fx|key|all|side|clear|off|state|health|doctor> [args]\n  KB_HOST/KB_PORT env to point at a remote service');
   switch (cmd) {
     case 'health': console.log(JSON.stringify(await call('GET', '/health'), null, 2)); break;

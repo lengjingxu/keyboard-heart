@@ -1,0 +1,42 @@
+name: 设备支持 / Device support
+description: 请求支持新键盘，或贡献一块新键盘的 profile
+labels: ["device-support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢帮助 keyboard-heart 扩大设备支持！设备支持全部由 `profiles/*.json` 数据文件驱动，贡献流程见 [docs/CONTRIBUTING-PROFILES.md](../blob/main/docs/CONTRIBUTING-PROFILES.md)。
+        小技巧：在仓库目录运行 `kbctl doctor --issue` 可以自动生成本表所需的 HID 设备信息。
+  - type: input
+    id: model
+    attributes:
+      label: 键盘型号 / Keyboard model
+      placeholder: MCHOSE Ace 68 Pro
+    validations:
+      required: true
+  - type: dropdown
+    id: intent
+    attributes:
+      label: 你的意图 / Intent
+      options:
+        - 认领候选 profile 并真机校准（adopt a candidate profile）
+        - 请求全新支持（request a new device）
+        - 已有 profile 不工作（an existing profile misbehaves）
+    validations:
+      required: true
+  - type: textarea
+    id: hid
+    attributes:
+      label: HID 设备信息 / HID device info
+      description: kbctl doctor --issue 生成的表格，或手填 VID:PID + interface
+      placeholder: |
+        | product | VID:PID | HID interface |
+        |---|---|---|
+        | Ace 68 Pro | 3837:300b | 1 |
+    validations:
+      required: true
+  - type: textarea
+    id: calibration
+    attributes:
+      label: 彩虹校准结果 / rainbow calibration
+      description: node heart.js rainbow 的照片链接（贡献 table 必填，请求类可留空）
