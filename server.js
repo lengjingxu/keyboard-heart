@@ -134,6 +134,7 @@ wss.on('connection', (ws, req) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`keyboard-heart listening on http://${HOST}:${PORT}`);
+  console.log(`  backend: ${process.env.KB_BACKEND || 'hid'}`);
   console.log(`  REST : POST /fx/success /fx/failure /fx/needInput /fx/notify /fx/processing /fx/heartbeat`);
   console.log(`         POST /keys /side /clear /off   GET /health /state`);
   console.log(`  WS   : ws://${HOST}:${PORT}/stream`);

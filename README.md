@@ -120,7 +120,35 @@ kbctl doctor               # 不需要服务，直接探测设备
 
 KB_HOST/KB_PORT 环境变量可指向远程服务。
 
-## 接入 AI 编码工具
+## 通用后端：QMK/VIA 与 OpenRGB
+
+除了 MCHOSE 直连 HID，keyboard-heart 兼容两个**通用标准**（`KB_BACKEND` 环境变量选择）：
+
+### OpenRGB（推荐的全彩逐键后端）
+
+[OpenRGB](https://openrgb.org) 支持几百款 RGB 设备。启动 OpenRGB（勾选 SDK Server，端口 6742），然后：
+
+```bash
+KB_BACKEND=openrgb npm start
+```
+
+- 自动发现服务器上的键盘（`KB_OPENRGB_DEVICE=<索引|名称>` 可指定）
+- 通过 LED 名称映射到 65% 网格——六个预设动画、每键 API、WS 帧流**全部原样可用**
+- 未匹配名称的 LED 按自身序号渲染，全板动画不受影响
+
+### VIA / QMK（全局氛围后端）
+
+任意开启 VIA 支持的 QMK 键盘（raw HID 0xFF60:0x61）：
+
+```bash
+KB_BACKEND=via npm start
+```
+
+⚠️ 标准 QMK 固件只开放**全局**亮度/颜色/灯效（逐键颜色不在标准协议内），因此 VIA 后端把每键动画降级为其平均色，适合当"任务状态氛围灯"。预设语义保留：success 绿、failure 红、needInput 琥珀。
+
+默认 `KB_BACKEND=hid` 走 MCHOSE 直连协议（profiles/ 档案表）。
+
+
 
 两条路线可以叠加：**hooks 自动触发**（工具生命周期事件直连灯光，AI 无感知）+ **提示词驱动**（写进 CLAUDE.md/AGENTS.md，AI 按任务状态自主调用）。
 
