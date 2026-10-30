@@ -118,15 +118,23 @@ KB_HOST/KB_PORT 环境变量可指向远程服务。
 - `Stop`（Claude 完成响应）→ `fx success`
 - `Notification`（请求权限/等待输入）→ `fx needInput`
 
-### Codex CLI（notify 桥接）
+### Codex CLI
 
-在 `~/.codex/config.toml` 里加一行（绝对路径）：
+**hooks（推荐，需 Codex `features.hooks = true`）**：往 `~/.codex/hooks.json` 的 `Stop` / `PermissionRequest` 数组各追加一项（与 otty/CodexIsland 等 hook 并列；注意 Codex 只支持一条 `notify`，hooks 可多条）：
+
+```json
+{ "_keyboard_heart": true, "hooks": [{ "type": "command", "command": "curl -s -X POST http://127.0.0.1:8791/fx/success >/dev/null 2>&1 || true" }] }
+```
+
+（`PermissionRequest` 里把 success 换成 needInput；新 hook 首次触发时 Codex 会请求信任确认。）
+
+**notify 桥接（兜底）**：没开 hooks 时，在 `~/.codex/config.toml` 加（绝对路径；Codex 只支持一条 notify，会覆盖已有配置）：
 
 ```toml
 notify = ["/absolute/path/to/keyboard-heart/integrations/codex-notify.sh"]
 ```
 
-桥接脚本会解析事件：任务轮完成 → `success`，请求批准 → `needInput`，其余 → `notify`。
+桥接脚本解析事件：任务轮完成 → `success`，请求批准 → `needInput`，其余 → `notify`。
 
 ### 提示词驱动（任何支持 CLAUDE.md / AGENTS.md 的 agent）
 
