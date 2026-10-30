@@ -19,7 +19,7 @@
 ## Quickstart
 
 ```bash
-git clone <this-repo> && cd keyboard-heart
+git clone https://github.com/lengjingxu/keyboard-heart && cd keyboard-heart
 npm install
 
 # 1. 自检：找到键盘、验证权限
@@ -38,7 +38,7 @@ kbctl fx success
 把下面这段话丢给任意 AI 编码助手（ZCode / Claude Code / Cursor…）：
 
 ```text
-请帮我安装并启动 keyboard-heart（https://github.com/<you>/keyboard-heart）：
+请帮我安装并启动 keyboard-heart（https://github.com/lengjingxu/keyboard-heart）：
 1. clone 到本地，npm install，运行 npm run doctor 自检
 2. 后台启动服务（npm start），确认 kbctl health 返回设备在线
 3. 注册 launchd/systemd 开机自启（运行 ./install.sh --launchd 或 --systemd）
