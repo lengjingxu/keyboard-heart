@@ -63,22 +63,22 @@ kbctl fx success
 ### REST（默认 `http://127.0.0.1:8791`）
 
 ```bash
-curl -X POST localhost:8790/fx/success          # 播放预设
-curl -X POST localhost:8790/fx/processing      # force 可选：{"force":true}
+curl -X POST localhost:8791/fx/success          # 播放预设
+curl -X POST localhost:8791/fx/processing      # force 可选：{"force":true}
 
-curl -X POST localhost:8790/keys \              # 静态点亮任意键
+curl -X POST localhost:8791/keys \              # 静态点亮任意键
   -H 'Content-Type: application/json' \
   -d '{"keys":{"Q":"#ff0000","Space":"#00ff88"}}'
 
-curl -X POST localhost:8790/keys -d '{"all":"#202020"}'
-curl -X POST localhost:8790/keys -d '{"grid":[["#ff0000",0,0,"#00ff00"]]}'  # 16×5 网格
+curl -X POST localhost:8791/keys -d '{"all":"#202020"}'
+curl -X POST localhost:8791/keys -d '{"grid":[["#ff0000",0,0,"#00ff00"]]}'  # 16×5 网格
 
-curl -X POST localhost:8790/side \              # 侧灯箱
+curl -X POST localhost:8791/side \              # 侧灯箱
   -d '{"color":"#00ff88","brightness":70}'      # 亮度 0-100
 
-curl -X POST localhost:8790/clear               # 清静态帧+停动画
-curl -X POST localhost:8790/off                 # 全灭（含侧灯）
-curl localhost:8790/health                      # 设备在线状态
+curl -X POST localhost:8791/clear               # 清静态帧+停动画
+curl -X POST localhost:8791/off                 # 全灭（含侧灯）
+curl localhost:8791/health                      # 设备在线状态
 ```
 
 ### WebSocket（自由发挥动画）

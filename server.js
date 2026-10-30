@@ -2,12 +2,12 @@
 /**
  * keyboard-heart service: local HTTP + WebSocket control for keyboard RGB.
  *
- *   node server.js            # listens on 127.0.0.1:8790
+ *   node server.js            # listens on 127.0.0.1:8791
  *   KB_PORT=9000 node server.js
  *
  * REST:  POST /fx/:name   POST /keys   POST /side   POST /clear   POST /off
  *        GET  /state      GET  /health
- * WS:    ws://127.0.0.1:8790/stream — push {op:"frame", keys|all|grid|side} JSON frames
+ * WS:    ws://127.0.0.1:8791/stream — push {op:"frame", keys|all|grid|side} JSON frames
  */
 const http = require('http');
 const { WebSocketServer } = require('ws');
