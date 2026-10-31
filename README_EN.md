@@ -13,6 +13,16 @@ Raw per-key REST + WebSocket control is open to any script.
 
 ![presets](https://img.shields.io/badge/presets-6-green) ![backends](https://img.shields.io/badge/backends-3-blue) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
 
+<div align="center">
+<img src="promo/out/hero.gif" alt="heartbeat preset · little red heart" width="460">
+<br>
+<sub>heartbeat preset · 3D render running the exact animation math of the real device</sub>
+<br><br>
+<video src="promo/out/keyboard-heart-3d.mp4" poster="promo/out/og.png" controls muted loop playsinline width="92%"></video>
+<br>
+<sub><strong>3D promo</strong>: six presets × cinematic camera (25 s, 1080p)</sub>
+</div>
+
 ## Wire up your AI in 30 seconds
 
 **Codex** (`~/.codex/hooks.json`, recommended):

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>keyboard-heart 3D</title>
+<style>
+  html,body{margin:0;padding:0;background:#000;overflow:hidden}
+  #app{position:fixed;inset:0}
+  #overlay{position:fixed;inset:0;pointer-events:none;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+  #caption{position:absolute;left:48px;bottom:44px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  #caption .name{font-size:40px;font-weight:700;letter-spacing:.5px}
+  #caption .desc{font-size:20px;color:#9aa4b5;margin-top:6px}
+  #brand{position:absolute;left:48px;top:40px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  #brand .t{font-size:30px;font-weight:800;letter-spacing:1px}
+  #brand .t em{color:#ff3b5c;font-style:normal}
+  #brand .s{font-size:15px;color:#9aa4b5;margin-top:4px;letter-spacing:.4px}
+  #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         opacity:0;transition:opacity .8s;text-shadow:0 4px 30px rgba(0,0,0,.9)}
+  #title .t{font-size:84px;font-weight:800;color:#f2f5fa;letter-spacing:2px}
+  #title .t em{color:#ff3b5c;font-style:normal}
+  #title .s{font-size:24px;color:#aab4c6;margin-top:14px;letter-spacing:.5px}
+  #title .u{font-size:18px;color:#6b7689;margin-top:16px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay">
+  <div id="brand"><div class="t">keyboard<em>-</em>heart</div><div class="s">A keyboard status light for AI coding agents</div></div>
+  <div id="caption"><div class="name"></div><div class="desc"></div></div>
+  <div id="title"><div class="t">keyboard<em>-</em>heart</div>
+    <div class="s">给 Codex / Claude Code 一个键盘状态灯 · A keyboard status light for AI coding agents</div>
+    <div class="u">github.com/lengjingxu/keyboard-heart</div></div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ---------- canonical 65% layout (from profiles/layouts/65.json) ---------- */
+const KEY_NAMES = [
+ 'Esc','1','2','3','4','5','6','7','8','9','0','-','=','Backspace','Ins',
+ 'Tab','Q','W','E','R','T','Y','U','I','O','P','[',']','\\','PgUp',
+ 'CapsLock','A','S','D','F','G','H','J','K','L',';',"'",'Enter','PgDn',
+ 'LShift','Z','X','C','V','B','N','M',',','.','/','RShift','Up','Del',
+ 'LCtrl','LWin','LAlt','Space','RAlt','Fn','RCtrl','Left','Down','Right'];
+const KEY_POS = [
+ [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0],[15,0],
+ [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1],[13,1],[15,1],
+ [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],[15,2],
+ [0,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[14,3],[15,3],
+ [0,4],[1,4],[2,4],[6,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4]];
+const LEGEND = { '-':'-','=':'=','[':'[',']':']','\\':'\\',';':';',"'": "'",',':',','.':'.','/':'/' };
+const WIDTHS = {13:2.0, 14:2.25, 15:1.0, 29:1.75, 30:1.75, 42:2.25, 43:1.0, 44:2.35, 55:2.75, 56:1.0, 57:1.0,
+                58:1.25,59:1.25,60:1.25,63:1.25,64:1.25,65:1.25,66:6.25,67:1.25,68:1.25,69:1.25};
+
+/* ---------- exact port of lib/animations.js math ---------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const gauss = (d, s) => Math.exp(-(d*d)/(2*s*s));
+const dist = (i,x0,y0) => Math.hypot(KEY_POS[i][0]-x0, KEY_POS[i][1]-y0);
+const maxDist = (x0,y0) => Math.max(...KEY_POS.map((_,i)=>dist(i,x0,y0)));
+const HEART_KEYS = ['4','5','7','8','E','R','T','Y','U','I','O','P','F','G','H','J','K','L','V','B','N','M'];
+const PERIMETER = (()=>{const p=[];for(let y=4;y>=0;y--)p.push([0,y]);for(let x=1;x<=15;x++)p.push([x,0]);for(let y=1;y<=4;y++)p.push([15,y]);for(let x=14;x>=1;x--)p.push([x,4]);return p;})();
+
+function frameAt(tMs, preset) {
+  const buf = new Array(68*3).fill(0);
+  const paint = (i, rgb, k) => { for (let c=0;c<3;c++) buf[i*3+c] = Math.max(buf[i*3+c], Math.round(rgb[c]*k)); };
+  if (preset==='success'){
+    const radius = clamp01(tMs/1200) * maxDist(0,4) * 1.25;
+    for (let i=0;i<68;i++){ const d=dist(i,0,4); paint(i,[0,255,60], gauss(d-radius,0.55)); }
+  } else if (preset==='failure'){
+    const PULSE=850,GAP=80,CYCLE=PULSE+GAP,EXPAND=320,HOLD=180,MAX_R=4.2,PULSES=3;
+    const pulse=Math.floor(tMs/CYCLE); if(pulse>=PULSES) return buf;
+    const t=tMs%CYCLE; let radius;
+    if(t<EXPAND) radius=(t/EXPAND)*MAX_R;
+    else if(t<EXPAND+HOLD) radius=MAX_R;
+    else radius=Math.max(0,(1-(t-EXPAND-HOLD)/(PULSE-EXPAND-HOLD))*MAX_R);
+    for(let i=0;i<68;i++){ const d=dist(i,15,0);
+      if(d<=radius){ const edge=clamp01((radius-d)/1.1); const fall=0.9-0.45*Math.min(1,d/6);
+        paint(i,[255,30,20],fall*edge); } }
+  } else if (preset==='needInput'){
+    const STEP=100, GROW=STEP*4, HOLD=180, RETRACT=STEP*4;
+    const CYCLE=GROW+HOLD+RETRACT+700, t=tMs%CYCLE;
+    const rowsOf=y=>KEY_POS.map((p,i)=>[p[1],i]).filter(([yy])=>yy===y).map(([,i])=>i);
+    const paintRow=(y,v)=>rowsOf(y).forEach(i=>paint(i,[255,170,0],v));
+    const retractStart=GROW+HOLD;
+    const litRows=new Set();
+    if (t<retractStart){
+      const s=Math.floor(t/STEP);
+      for(let k=0;k<=Math.min(s,3);k++) litRows.add(4-k);
+    } else if (t<retractStart+RETRACT){
+      for(let y=1;y<=4;y++) litRows.add(y);
+      const s=Math.floor((t-retractStart)/STEP);
+      for(let k=0;k<=Math.min(s,3);k++) litRows.delete(1+k);
+    } else {
+      const phase=(t-(retractStart+RETRACT))/(CYCLE-(retractStart+RETRACT));
+      paintRow(4, 0.15+0.5*(0.5-0.5*Math.cos(2*Math.PI*phase)));
+    }
+    for(const y of litRows) paintRow(y,0.55);
+  } else if (preset==='notify'){
+    const radius = clamp01(tMs/900) * maxDist(7.5,2) * 1.25;
+    for (let i=0;i<68;i++){ const d=dist(i,7.5,2); paint(i,[255,255,255], gauss(d-radius,0.8)); }
+  } else if (preset==='processing'){
+    const lap=1100, head=((tMs%lap)/lap)*PERIMETER.length;
+    for(let tail=0;tail<6;tail++){
+      const idx=Math.floor(head-tail+PERIMETER.length)%PERIMETER.length;
+      const [x,y]=PERIMETER[idx], inten=(1-tail/6)*0.95;
+      KEY_POS.forEach((p,i)=>{ if(p[0]===x&&p[1]===y) paint(i,[0,220,255],inten); });
+    }
+  } else if (preset==='heartbeat'){
+    const period=1500,x=(tMs%period)/period;
+    const thump=u=>Math.exp(-((u-0.12)**2)/0.0016)+0.75*Math.exp(-((u-0.32)**2)/0.0025);
+    const k=Math.min(1,Math.max(0.15,thump(x)))*0.85;
+    HEART_KEYS.forEach(n=>{ const i=KEY_NAMES.indexOf(n); if(i>=0) paint(i,[255,0,0],k); });
+  }
+  return buf;
+}
+
+/* ---------- three.js scene ---------- */
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05070c);
+scene.fog = new THREE.Fog(0x05070c, 26, 60);
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 200);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+scene.add(new THREE.AmbientLight(0x33405a, 0.5));
+const keyLight = new THREE.SpotLight(0xbfd4ff, 260, 60, 0.7, 0.5, 1.6);
+keyLight.position.set(6, 18, 10); scene.add(keyLight);
+const rim = new THREE.DirectionalLight(0x5a7dff, 1.1); rim.position.set(-12, 8, -14); scene.add(rim);
+
+/* keycaps */
+const caseGeo = new THREE.BoxGeometry(18.6, 0.7, 6.6);
+const caseMat = new THREE.MeshStandardMaterial({ color:0x2a2f3a, metalness:0.85, roughness:0.35 });
+const plate = new THREE.Mesh(caseGeo, caseMat); plate.position.y = -0.42; scene.add(plate);
+
+const capGeo = new THREE.BoxGeometry(0.86, 0.34, 0.86);
+const topGeo = new THREE.PlaneGeometry(0.72, 0.72);
+const keys = [], tops = [], glow = new Array(68).fill(0);
+const keyGroup = new THREE.Group(); scene.add(keyGroup);
+const mirrorGroup = new THREE.Group(); mirrorGroup.scale.y = -1; scene.add(mirrorGroup);
+
+function legendTexture(txt){
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(0,0,0,0)';
+  g.clearRect(0,0,96,96);
+  g.font = '600 34px -apple-system, Helvetica';
+  g.fillStyle = 'rgba(235,240,250,0.92)';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(txt, 48, 50);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+function legendFor(name){ return LEGEND[name] ?? (name.length===1?name:''); }
+
+KEY_NAMES.forEach((name,i)=>{
+  const [gx,gy] = KEY_POS[i];
+  const w = WIDTHS[i] ?? 1.0;
+  const x = gx*1.0 - 7.5 + (w-1)*0.5, z = gy*1.0 - 2.0;
+  const mat = new THREE.MeshStandardMaterial({ color:0x11141c, metalness:0.4, roughness:0.42,
+    emissive: new THREE.Color(0,0,0) });
+  const cap = new THREE.Mesh(capGeo, mat);
+  cap.scale.x = w*0.94; cap.position.set(x, 0.06, z);
+  keyGroup.add(cap); keys.push({ mesh:cap, mat, name, w });
+  const lg = legendFor(name);
+  if (lg){
+    const t = new THREE.Mesh(topGeo, new THREE.MeshBasicMaterial({ map:legendTexture(lg), transparent:true, opacity:0.85 }));
+    t.rotation.x = -Math.PI/2; t.position.set(x, 0.235, z);
+    if (w>1) t.scale.x = w*0.94;
+    keyGroup.add(t); tops.push(t);
+  }
+});
+mirrorGroup.add(keyGroup.clone());
+mirrorGroup.position.y = -1.24;
+
+/* glossy desk: dark, semi-transparent so the mirrored keys read as reflection */
+const desk = new THREE.Mesh(new THREE.PlaneGeometry(120, 120),
+  new THREE.MeshStandardMaterial({ color:0x070a12, metalness:0.75, roughness:0.25, transparent:true, opacity:0.86 }));
+desk.rotation.x = -Math.PI/2; desk.position.y = -0.9; scene.add(desk);
+const grid2 = new THREE.GridHelper(120, 60, 0x0e1626, 0x0a0f1a);
+grid2.position.y = -0.895; scene.add(grid2);
+
+/* postprocessing */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.85, 0.55, 0.35);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ---------- camera timeline ---------- */
+const SEG = [
+  { preset:'success',   dur:3200, zh:'success · 任务完成',      desc:'绿色冲击波，从左下角扫过全板',   cam:[[-15,2.0,10],[-5,0.5,2.0],[-8,5.0,7],[0,0,0.6]] },
+  { preset:'failure',   dur:3200, zh:'failure · 任务失败',      desc:'右上角红色脉冲 ×3',              cam:[[15,2.4,9],[6,0.5,-1.5],[8,5.2,6.5],[0,0,0]] },
+  { preset:'notify',    dur:2400, zh:'notify · 通知',           desc:'白色涟漪，从中心扩散',           cam:[[-4,11,7],[0,0,0],[0,9,3],[0,0,0]] },
+  { preset:'processing',dur:5000, zh:'processing · 处理中',     desc:'青色彗星绕外圈跑马（长驻）',     arc:{r0:13.5,r1:12.0,h0:6.6,h1:8.2,a0:-0.5,a1:2.6}, look:[0,0,0] },
+  { preset:'needInput', dur:4000, zh:'needInput · 需要你',      desc:'琥珀逐行生长，底行呼吸（长驻）', cam:[[7,2.0,11],[0,0,1.8],[3,3.4,8],[0,0,1.2]] },
+  { preset:'heartbeat', dur:4500, zh:'heartbeat · 心跳',        desc:'给你的一颗小心心',               cam:[[1.6,13,8.5],[0,0,0.3],[0.6,10,3.2],[0,0,0.2]] },
+  { preset:null,        dur:3500, zh:'',                        desc:'',                               arc:{r0:12,r1:13.5,h0:7.5,h1:6.0,a0:2.8,a1:4.8}, look:[0,0,0] },
+];
+const TOTAL = SEG.reduce((s,x)=>s+x.dur, 0);
+const smooth = t => t*t*(3-2*t);
+const lerp3 = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+
+const capEl = document.querySelector('#caption .name');
+const descEl = document.querySelector('#caption .desc');
+const titleEl = document.getElementById('title');
+
+function locate(tMs){
+  let acc = 0;
+  for (let s=0; s<SEG.length; s++){
+    const seg = SEG[s];
+    if (tMs < acc + seg.dur){
+      const segT = tMs - acc;
+      const p = smooth(segT / seg.dur);
+      let pos, look;
+      if (seg.arc){
+        const a = seg.arc.a0 + (seg.arc.a1 - seg.arc.a0) * p;
+        const r = seg.arc.r0 + (seg.arc.r1 - seg.arc.r0) * p;
+        const h = seg.arc.h0 + (seg.arc.h1 - seg.arc.h0) * p;
+        pos = [r * Math.sin(a), h, r * Math.cos(a)];
+        look = seg.look;
+      } else {
+        pos = lerp3(seg.cam[0], seg.cam[2], p);
+        look = lerp3(seg.cam[1], seg.cam[3], p);
+      }
+      return { seg, segT, pos, look, index: s };
+    }
+    acc += seg.dur;
+  }
+  return null;
+}
+
+window.renderFrame = function(tMs){
+  const loc = locate(tMs % TOTAL);
+  if (!loc) return;
+  const { seg, segT, pos, look } = loc;
+  let camY = pos[1];
+  if (seg.preset === 'heartbeat'){
+    const beat = frameAt(segT, 'heartbeat');
+    const k = beat[KEY_NAMES.indexOf('4')*3] / 255;   // thump 0..0.85
+    camY -= 1.6 * k;
+  }
+  camera.position.set(pos[0], camY, pos[2]);
+  camera.lookAt(look[0], look[1], look[2]);
+
+  const buf = seg.preset ? frameAt(segT, seg.preset) : frameAt((segT+400) % 1500, 'heartbeat');
+  for (let i=0;i<68;i++){
+    const r = buf[i*3]/255, g = buf[i*3+1]/255, b = buf[i*3+2]/255;
+    const inten = Math.max(r,g,b);
+    keys[i].mat.emissive.setRGB(r*1.15, g*1.15, b*1.15);
+    keys[i].mat.emissiveIntensity = 0.2 + 0.9*inten;
+    const side = 0.11 + 0.42*inten;
+    keys[i].mat.color.setRGB(side*0.9, side, side*1.15);
+  }
+
+  capEl.textContent = seg.zh || '';
+  descEl.textContent = seg.desc || '';
+  capEl.parentElement.style.opacity = seg.zh ? 1 : 0;
+  titleEl.style.opacity = (loc.index === SEG.length-1) ? clamp01((segT-800)/900) : 0;
+
+  window.__dbg = { cam: camera.position.toArray(), look: [look[0],look[1],look[2]], segT, preset: seg.preset, tMs };
+  composer.render();
+};
+
+window.__ready = true;
+window.__total = TOTAL;
+</script>
+</body>
+</html>

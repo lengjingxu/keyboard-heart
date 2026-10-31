@@ -13,6 +13,16 @@
 
 ![presets](https://img.shields.io/badge/presets-6-green) ![backends](https://img.shields.io/badge/backends-3-blue) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
 
+<div align="center">
+<img src="promo/out/hero.gif" alt="heartbeat 预设 · 红色小心心搏动" width="460">
+<br>
+<sub>heartbeat 预设 · 与真机同一套动画算法的 3D 渲染</sub>
+<br><br>
+<video src="promo/out/keyboard-heart-3d.mp4" poster="promo/out/og.png" controls muted loop playsinline width="92%"></video>
+<br>
+<sub><strong>3D 宣传片</strong>：六个预设 × 电影运镜（25 秒，1080p）</sub>
+</div>
+
 ## 30 秒接入你的 AI
 
 **Codex**（`~/.codex/hooks.json`，推荐）：
