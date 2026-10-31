@@ -1,31 +1,66 @@
 # keyboard-heart ⌨️❤️
 
-把机械键盘的 RGB 灯变成你电脑的**状态指示器**：任务完成来一波绿色冲击波，报错来一记红色脉冲，需要你输入时底行琥珀呼吸。本地 REST + WebSocket 服务，任何脚本、AI agent、自动化都能调用。
+**给 Codex、Claude Code 和所有 AI 编码工具一个键盘状态灯**：AI 完成任务 → 绿色波纹扫过键盘；报错 → 右上角红色脉冲 ×3；等待你的批准 → 底行琥珀逐行生长。本地 REST + WebSocket 服务，两条接线方式：
+
+- **hooks 自动接线**（AI 无感知）：Codex 加一行 `notify` / `hooks` 配置，Claude Code 合并一段 hooks JSON——AI 每次答完/请求批准，灯光自动反馈
+- **提示词驱动**（AI 自主发挥）：把预设提示词贴进 CLAUDE.md / AGENTS.md，AI 在长任务开始、成功、失败、需要输入时自主打灯
+
+开放每键 REST + WebSocket 原始控制，任何脚本都能自由发挥。
 
 > 协议为独立逆向成果（WebHID 流量分析），无需厂商驱动，无需官方控制台。
 
-![presets](https://img.shields.io/badge/presets-6-green) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
+![presets](https://img.shields.io/badge/presets-6-green) ![backends](https://img.shields.io/badge/backends-3-blue) ![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)
 
-## 支持设备
+## 30 秒接入你的 AI
 
-设备支持由 `profiles/` 数据文件驱动（[贡献指南](docs/CONTRIBUTING-PROFILES.md)），新增键盘不需要改代码。
+**Codex**（`~/.codex/hooks.json`，推荐）：
 
-**已验证**
+```json
+{ "_keyboard_heart": true, "hooks": [{ "type": "command", "command": "curl -s -X POST http://127.0.0.1:8791/fx/success >/dev/null 2>&1 || true" }] }
+```
 
-| 键盘 | USB ID | 状态 |
-|---|---|---|
-| MCHOSE Ace 68 Air 2（有线） | `0x3837:0x300A` | ✅ 全键位真机实测 |
+**Claude Code**（合并进 `~/.claude/settings.json`）：见 [integrations/claude-code-hooks.json](integrations/claude-code-hooks.json)。
 
-**社区表**（即插即用，未经真机确认）
+**任何 AI / 脚本**（一行 curl）：
+
+```bash
+curl -X POST localhost:8791/fx/success
+```
+
+完整接入说明见下方 [接入 AI 编码工具](#接入-ai-编码工具) 章节。
+
+## 支持的键盘
+
+三层后端，覆盖 **12 款 MCHOSE 型号（直连）+ OpenRGB 生态数百款 + QMK/VIA 生态 1000+ 配置**：
+
+### ① MCHOSE 直连（`KB_BACKEND=hid`，默认）— 12 款
+
+协议独立逆向（55 DD 实时推流 + cmd=06 侧灯配置），设备档案由 `profiles/` 数据文件驱动。
+
+**真机验证（1）**
+
+| 键盘 | USB ID |
+|---|---|
+| MCHOSE Ace 68 Air 2 | `0x3837:0x300A` |
+
+**社区表即插即用（2）**
 
 | 键盘 | USB ID | 来源 |
 |---|---|---|
 | MCHOSE Ace 68（有线） | `0x41E4:0x2116` | SignalRGB 社区插件 |
 | MCHOSE Ace 68（顺序 LED 变体） | `0x41E4:0x2114` | 社区 PR |
 
-**候选**（9 款 ace68 家族变体：air ii/iii、gt、i、iii、pro、turbo 8k/16k、v2 iii）——键位表已从厂商控制台资产自动提取，等有对应设备的贡献者确认 PID 并校准；`kbctl doctor` 会列出。同方法还适用于 ace60/ace75/g87/g75 等 22 款（需先贡献对应尺寸的 layout）。
+**候选表已就绪、等真机校准（9）**：Ace 68 air ii / air iii / gt / i / iii / pro / turbo 8k / turbo 16k / v2 iii —— 键位表已从厂商控制台资产自动提取（68/68 键全命中），`kbctl doctor` 列出，认领流程见 [贡献指南](docs/CONTRIBUTING-PROFILES.md)。
 
-更远的目标：通过 [SignalRGB 插件导入器](tools/signalrgb-import.js)（已验证 68/68 一致）接入社区已逆向的键盘（AULA、Ajazz、Redragon 等），以及 VIA/QMK 标准协议与 OpenRGB SDK 后端。
+**同路线待解锁（22 款 MCHOSE）**：ACE60/Pro/X 系列、ACE75、G75 v2、G87 v2、G98、GOD60、GT75、JET75、K87、K99、MIX87、ZERO75X 等（需先贡献对应尺寸 layout）。
+
+### ② OpenRGB 生态（`KB_BACKEND=openrgb`）— 数百款、100+ 品牌，逐键全功能
+
+接入 [OpenRGB](https://openrgb.org) SDK（127.0.0.1:6742）即获得逐键控制，六个预设动画、每键 API、WS 帧流原样工作。覆盖 Corsair、Razer、Logitech、SteelSeries、ASUS ROG、MSI、Redragon、Womier 等品牌的键盘/鼠标/鼠标垫/灯带。
+
+### ③ QMK / VIA（`KB_BACKEND=via`）— 1000+ 键盘配置，全局氛围
+
+任意启用 VIA 的 QMK 键盘（raw HID 0xFF60:0x61）。标准 QMK 固件只开放全局亮度/颜色/灯效（无逐键协议），动画降级为平均色——语义保留（success 绿 / failure 红 / needInput 琥珀），适合当任务状态氛围灯。
 
 ⚠️ 仅 USB 有线模式；2.4G/蓝牙接收器不暴露灯控接口。
 
