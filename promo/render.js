@@ -103,8 +103,8 @@ async function main() {
 
   /* soundtrack: dark ambient pad + heartbeat kicks aligned to the
      heartbeat segment (starts 17.8s, cycle 1.5s, thumps at +0.18s/+0.38s) */
-  const DUR = 25.8;
-  const HB_START = 17.8;
+  const DUR = 31.8;
+  const HB_START = 23.4;
   const kicks = [];
   for (let c = 0; c < 3; c++) kicks.push(HB_START + 1.5 * c + 0.18, HB_START + 1.5 * c + 0.38);
   const kickTerms = kicks.map(Tk =>
@@ -114,7 +114,7 @@ async function main() {
   const wav = path.join(OUT, 'sound.wav');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error',
     '-f', 'lavfi', '-i', `aevalsrc='${padExpr}+${kickTerms}':d=${DUR}:s=44100`,
-    '-af', 'afade=t=in:d=1.2,afade=t=out:st=24.8:d=1', '-ac', '2', wav]);
+    '-af', 'afade=t=in:d=1.2,afade=t=out:st=30.8:d=1', '-ac', '2', wav]);
 
   const final = path.join(OUT, 'keyboard-heart-3d.mp4.tmp.mp4');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', mp4, '-i', wav,
@@ -131,7 +131,7 @@ async function main() {
   console.log('gif:', gif);
 
   const og = path.join(OUT, 'og.png');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, stillFrame(locateFrame('heartbeat', 180))),
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, stillFrame('done', 1700)),
     '-vf', 'scale=1200:630:force_original_aspect_ratio=increase,crop=1200:630', og]);
   console.log('og:', og);
 
@@ -144,7 +144,7 @@ function locateFrame(preset, intoMs) { return { preset, intoMs }; }
 /* full 24fps timeline over all segments */
 function fullTimeline() {
   // mirror of the page's SEG durations
-  const SEG = [['success', 3200], ['failure', 3200], ['notify', 2400], ['processing', 5000], ['needInput', 4000], ['heartbeat', 4500], ['outro', 3500]];
+  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
   const frames = [];
   let acc = 0;
   for (const [, dur] of SEG) {
@@ -156,7 +156,7 @@ function fullTimeline() {
 
 /* sparse sampling across segments for look review */
 function sampleFrames() {
-  const SEG = [['success', 3200], ['failure', 3200], ['notify', 2400], ['processing', 5000], ['needInput', 4000], ['heartbeat', 4500], ['outro', 3500]];
+  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
   const frames = [];
   let acc = 0;
   for (const [preset, dur] of SEG) {
@@ -168,7 +168,7 @@ function sampleFrames() {
 
 function stillFrame({ preset, intoMs }) {
   // find the frame FILENAME whose segment+time matches
-  const SEG = [['success', 3200], ['failure', 3200], ['notify', 2400], ['processing', 5000], ['needInput', 4000], ['heartbeat', 4500], ['outro', 3500]];
+  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
   let idx = 0;
   for (const [p, dur] of SEG) {
     for (let t = 0; t < dur; t += 1000 / FPS) {

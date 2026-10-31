@@ -7,22 +7,36 @@
   html,body{margin:0;padding:0;background:#000;overflow:hidden}
   #app{position:fixed;inset:0}
   #overlay{position:fixed;inset:0;pointer-events:none;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif}
-  #caption{position:absolute;left:48px;bottom:44px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
-  #caption .name{font-size:40px;font-weight:700;letter-spacing:.5px}
-  #caption .desc{font-size:20px;color:#9aa4b5;margin-top:6px}
-  #caption .en{font-size:15px;color:#69738a;margin-top:4px;letter-spacing:.3px}
-  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 52%, rgba(0,0,0,.58) 100%)}
-  #fade{position:absolute;inset:0;background:#000;opacity:0}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%)}
   #brand{position:absolute;left:48px;top:40px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
   #brand .t{font-size:30px;font-weight:800;letter-spacing:1px}
   #brand .t em{color:#ff3b5c;font-style:normal}
   #brand .s{font-size:15px;color:#9aa4b5;margin-top:4px;letter-spacing:.4px}
+  #caption{position:absolute;left:48px;bottom:44px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  #caption .name{font-size:38px;font-weight:700;letter-spacing:.5px}
+  #caption .desc{font-size:19px;color:#9aa4b5;margin-top:6px}
+  #caption .en{font-size:14px;color:#69738a;margin-top:4px;letter-spacing:.3px}
+  #fade{position:absolute;inset:0;background:#000;opacity:0}
   #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-         opacity:0;transition:opacity .8s;text-shadow:0 4px 30px rgba(0,0,0,.9)}
+         opacity:0;text-shadow:0 4px 30px rgba(0,0,0,.9)}
   #title .t{font-size:84px;font-weight:800;color:#f2f5fa;letter-spacing:2px}
   #title .t em{color:#ff3b5c;font-style:normal}
   #title .s{font-size:24px;color:#aab4c6;margin-top:14px;letter-spacing:.5px}
   #title .u{font-size:18px;color:#6b7689;margin-top:16px}
+  /* agent terminal */
+  #term{position:absolute;right:52px;top:110px;width:540px;opacity:0;
+        background:rgba(9,12,20,.86);border:1px solid rgba(110,135,180,.28);border-radius:12px;
+        box-shadow:0 18px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+        backdrop-filter: blur(4px); overflow:hidden}
+  #term .bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;
+             background:rgba(255,255,255,.045);border-bottom:1px solid rgba(255,255,255,.07)}
+  #term .dot{width:11px;height:11px;border-radius:50%}
+  #term .r{background:#ff5f57}#term .y{background:#febc2e}#term .g{background:#28c840}
+  #term .ttl{margin-left:8px;font-size:12.5px;color:#8b96ab;font-family:-apple-system,monospace;letter-spacing:.4px}
+  #tlog{margin:0;padding:16px 18px 18px;min-height:132px;font:13.5px/1.75 "SF Mono",Menlo,monospace;color:#c9d3e4;
+        white-space:pre-wrap;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #tlog .ok{color:#4ade80}#tlog .err{color:#f87171}#tlog .warn{color:#fbbf24}
+  #tlog .accent{color:#67e8f9}#tlog .dim{color:#66738a}#tlog .pink{color:#ff85a8}
 </style>
 </head>
 <body>
@@ -30,10 +44,11 @@
 <div id="overlay">
   <div id="vignette"></div>
   <div id="brand"><div class="t">keyboard<em>-</em>heart</div><div class="s">A keyboard status light for AI coding agents</div></div>
+  <div id="term"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">codex · agent session</span></div><pre id="tlog"></pre></div>
   <div id="caption"><div class="name"></div><div class="desc"></div><div class="en"></div></div>
   <div id="fade"></div>
   <div id="title"><div class="t">keyboard<em>-</em>heart</div>
-    <div class="s">给 Codex / Claude Code 一个键盘状态灯 · A keyboard status light for AI coding agents</div>
+    <div class="s">让 AI 在你的键盘上表达 · Let your AI speak in light</div>
     <div class="u">github.com/lengjingxu/keyboard-heart</div></div>
 </div>
 <script type="importmap">
@@ -51,7 +66,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-/* ---------- canonical 65% layout (from profiles/layouts/65.json) ---------- */
+/* ---------- canonical 65% layout ---------- */
 const KEY_NAMES = [
  'Esc','1','2','3','4','5','6','7','8','9','0','-','=','Backspace','Ins',
  'Tab','Q','W','E','R','T','Y','U','I','O','P','[',']','\\','PgUp',
@@ -65,10 +80,10 @@ const KEY_POS = [
  [0,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[14,3],[15,3],
  [0,4],[1,4],[2,4],[6,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4]];
 const LEGEND = { '-':'-','=':'=','[':'[',']':']','\\':'\\',';':';',"'": "'",',':',','.':'.','/':'/' };
-const WIDTHS = {13:2.0, 14:2.25, 15:1.0, 29:1.75, 30:1.75, 42:2.25, 43:1.0, 44:2.35, 55:2.75, 56:1.0, 57:1.0,
+const WIDTHS = {13:2.0, 14:2.25, 29:1.75, 30:1.75, 42:2.25, 43:1.0, 44:2.35, 55:2.75, 56:1.0, 57:1.0,
                 58:1.25,59:1.25,60:1.25,63:1.25,64:1.25,65:1.25,66:6.25,67:1.25,68:1.25,69:1.25};
 
-/* ---------- exact port of lib/animations.js math ---------- */
+/* ---------- exact port of lib/animations.js ---------- */
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const gauss = (d, s) => Math.exp(-(d*d)/(2*s*s));
 const dist = (i,x0,y0) => Math.hypot(KEY_POS[i][0]-x0, KEY_POS[i][1]-y0);
@@ -130,6 +145,69 @@ function frameAt(tMs, preset) {
   return buf;
 }
 
+/* ---------- pixel font: agent writes words/pictures on the board ---------- */
+const FONT = {
+  'D': ['##.','#.#','#.#','#.#','##.'],
+  'O': ['###','#.#','#.#','#.#','###'],
+  'N': ['#..#','##.#','#.##','#..#','#..#'],
+  'E': ['###','#..','##.','#..','###'],
+  '♥': ['.#.#.','#####','#####','.###.','..#..'],
+};
+function textFrame(word, tMs, rgb, opts = {}) {
+  const buf = new Array(68*3).fill(0);
+  const toks = [...word];
+  const totalW = toks.reduce((s,ch)=>s+FONT[ch][0].length+1,-1);
+  const startX = Math.floor((16-totalW)/2);
+  const perCol = opts.cascade ?? 70;
+  let gx = startX;
+  for (const ch of toks) {
+    const pat = FONT[ch];
+    for (let r=0;r<5;r++) for (let c=0;c<pat[r].length;c++){
+      if (pat[r][c] !== '#') continue;
+      const col = gx + c;
+      const i = KEY_POS.findIndex(p=>p[0]===col&&p[1]===r);
+      if (i<0) continue;
+      const reveal = 150 + col*perCol;
+      const a = clamp01((tMs-reveal)/200);
+      if (a<=0) continue;
+      let k = a * (0.82 + 0.18*Math.sin(tMs/260));
+      if (opts.thump){
+        const period=1500,x=(tMs%period)/period;
+        const thump=u=>Math.exp(-((u-0.12)**2)/0.0016)+0.75*Math.exp(-((u-0.32)**2)/0.0025);
+        k *= Math.min(1,Math.max(0.12,thump(x)));
+      }
+      paint(buf, i, rgb, k); // hoisted below
+    }
+    gx += pat[0].length + 1;
+  }
+  function paint(b,i,c,k){ for(let q=0;q<3;q++) b[i*3+q]=Math.max(b[i*3+q],Math.round(c[q]*k)); }
+  return buf;
+}
+
+/* ---------- spatial light bleed: neighbors glow, like real LED spill ---------- */
+const NB = (() => {
+  const list = [];
+  for (let i=0;i<68;i++){
+    const [x,y]=KEY_POS[i]; const arr=[];
+    for(let j=0;j<68;j++){ if(j===i) continue;
+      const d=Math.hypot(KEY_POS[j][0]-x,KEY_POS[j][1]-y);
+      if(d<=1.9) arr.push([j, Math.exp(-d*d/(2*0.55*0.55))]);
+    }
+    list.push(arr);
+  }
+  return list;
+})();
+function bleed(buf){
+  const out = buf.slice();
+  for(let i=0;i<68;i++){
+    for(let c=0;c<3;c++){
+      let s=0; for(const [j,w] of NB[i]) s += buf[j*3+c]*w;
+      out[i*3+c] = Math.min(255, buf[i*3+c] + s*0.32);
+    }
+  }
+  return out;
+}
+
 /* ---------- three.js scene ---------- */
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -150,28 +228,24 @@ const keyLight = new THREE.SpotLight(0xbfd4ff, 260, 60, 0.7, 0.5, 1.6);
 keyLight.position.set(6, 18, 10); scene.add(keyLight);
 const rim = new THREE.DirectionalLight(0x5a7dff, 1.1); rim.position.set(-12, 8, -14); scene.add(rim);
 
-/* keycaps */
+/* case + brand etch */
 const caseGeo = new RoundedBoxGeometry(18.6, 0.7, 6.6, 4, 0.14);
-const caseMat = new THREE.MeshStandardMaterial({ color:0x2a2f3a, metalness:0.85, roughness:0.35 });
-const plate = new THREE.Mesh(caseGeo, caseMat); plate.position.y = -0.42; scene.add(plate);
-
-/* brand etch on the case wrist area */
+const plate = new THREE.Mesh(caseGeo, new THREE.MeshStandardMaterial({ color:0x2a2f3a, metalness:0.85, roughness:0.35 }));
+plate.position.y = -0.42; scene.add(plate);
 {
   const c = document.createElement('canvas'); c.width = 512; c.height = 64;
   const g = c.getContext('2d');
   g.font = '700 30px -apple-system, Helvetica'; g.fillStyle = 'rgba(160,175,200,0.55)';
   g.textAlign = 'right'; g.textBaseline = 'middle';
   g.fillText('keyboard-heart', 500, 32);
-  const t = new THREE.CanvasTexture(c);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.42),
-    new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.7 }));
-  m.rotation.x = -Math.PI/2; m.position.set(6.6, -0.062, 2.72);
-  scene.add(m);
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.7 }));
+  m.rotation.x = -Math.PI/2; m.position.set(6.6, -0.062, 2.72); scene.add(m);
 }
 
-/* tapered keycap: top face 0.78× of base, like a real sculpted cap */
+/* tapered keycaps */
 function taperedCapGeo(){
-  const geo = new THREE.BoxGeometry(0.86, 0.34, 0.86, 1, 1, 1);
+  const geo = new THREE.BoxGeometry(0.86, 0.34, 0.86);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     if (pos.getY(i) > 0) { pos.setX(i, pos.getX(i) * 0.78); pos.setZ(i, pos.getZ(i) * 0.78); }
@@ -181,17 +255,16 @@ function taperedCapGeo(){
 }
 const capGeo = taperedCapGeo();
 const topGeo = new THREE.PlaneGeometry(0.62, 0.62);
-const keys = [], tops = [], glow = new Array(68).fill(0);
+const keys = [], tops = [];
 const keyGroup = new THREE.Group(); scene.add(keyGroup);
 const mirrorGroup = new THREE.Group(); mirrorGroup.scale.y = -1; scene.add(mirrorGroup);
 
 function legendTexture(txt){
   const c = document.createElement('canvas'); c.width = c.height = 96;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(0,0,0,0)';
   g.clearRect(0,0,96,96);
   g.font = '600 34px -apple-system, Helvetica';
-  g.fillStyle = 'rgba(235,240,250,0.92)';
+  g.fillStyle = '#ffffff';
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(txt, 48, 50);
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
@@ -206,19 +279,47 @@ KEY_NAMES.forEach((name,i)=>{
     emissive: new THREE.Color(0,0,0) });
   const cap = new THREE.Mesh(capGeo, mat);
   cap.scale.x = w*0.94; cap.position.set(x, 0.06, z);
-  keyGroup.add(cap); keys.push({ mesh:cap, mat, name, w });
+  keyGroup.add(cap); keys.push({ mesh:cap, mat, baseY:0.06 });
   const lg = legendFor(name);
   if (lg){
-    const t = new THREE.Mesh(topGeo, new THREE.MeshBasicMaterial({ map:legendTexture(lg), transparent:true, opacity:0.85 }));
+    const lmat = new THREE.MeshBasicMaterial({ map: legendTexture(lg), transparent: true, opacity: 0.55, color: 0xdfe6f2 });
+    const t = new THREE.Mesh(topGeo, lmat);
     t.rotation.x = -Math.PI/2; t.position.set(x, 0.235, z);
     if (w>1) t.scale.x = w*0.94;
-    keyGroup.add(t); tops.push(t);
+    keyGroup.add(t); tops.push({ mat: lmat, i });
   }
 });
 mirrorGroup.add(keyGroup.clone());
 mirrorGroup.position.y = -1.24;
 
-/* glossy desk: dark, semi-transparent so the mirrored keys read as reflection */
+/* glow sprites (bloom-like halo per key) + light pools on the desk */
+function radialTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64,64,0,64,64,64);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)');
+  gr.addColorStop(0.35,'rgba(255,255,255,0.32)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+const glowTex = radialTexture();
+const sprites = [], pools = [];
+for (let i=0;i<68;i++){
+  const [gx,gy] = KEY_POS[i];
+  const x = gx - 7.5, z = gy - 2.0;
+  const sm = new THREE.SpriteMaterial({ map: glowTex, color: 0x000000, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false });
+  const sp = new THREE.Sprite(sm); sp.position.set(x, 0.55, z); sp.scale.set(0.9,0.9,1);
+  scene.add(sp); sprites.push(sp);
+  const pm = new THREE.MeshBasicMaterial({ map: glowTex, color: 0x000000, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false });
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.6), pm);
+  pool.rotation.x = -Math.PI/2; pool.position.set(x, -0.86, z);
+  scene.add(pool); pools.push(pool);
+}
+
+/* desk */
 const desk = new THREE.Mesh(new THREE.PlaneGeometry(120, 120),
   new THREE.MeshStandardMaterial({ color:0x070a12, metalness:0.75, roughness:0.25, transparent:true, opacity:0.86 }));
 desk.rotation.x = -Math.PI/2; desk.position.y = -0.9; scene.add(desk);
@@ -230,19 +331,27 @@ scene.add(grid2);
 /* postprocessing */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.85, 0.55, 0.35);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.5, 0.72);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-/* ---------- camera timeline ---------- */
+/* ---------- acts: the agent ↔ keyboard dialogue ---------- */
 const SEG = [
-  { preset:'success',   dur:3200, zh:'success · 任务完成',      desc:'绿色冲击波，从左下角扫过全板',   en:'green shockwave sweeping the board',        cam:[[-15,2.0,10],[-5,0.5,2.0],[-8,5.0,7],[0,0,0.6]] },
-  { preset:'failure',   dur:3200, zh:'failure · 任务失败',      desc:'右上角红色脉冲 ×3',              en:'red pulse bursts from the top-right',       cam:[[15,2.4,9],[6,0.5,-1.5],[8,5.2,6.5],[0,0,0]] },
-  { preset:'notify',    dur:2400, zh:'notify · 通知',           desc:'白色涟漪，从中心扩散',           en:'white ripple from the center',              cam:[[-4,11,7],[0,0,0],[0,9,3],[0,0,0]] },
-  { preset:'processing',dur:5000, zh:'processing · 处理中',     desc:'青色彗星绕外圈跑马（长驻）',     en:'cyan comet orbiting the perimeter (sticky)', arc:{r0:13.5,r1:12.0,h0:6.6,h1:8.2,a0:-0.5,a1:2.6}, look:[0,0,0] },
-  { preset:'needInput', dur:4000, zh:'needInput · 需要你',      desc:'琥珀逐行生长，底行呼吸（长驻）', en:'amber rows growing up, bottom breathing (sticky)', cam:[[7,2.0,11],[0,0,1.8],[3,3.4,8],[0,0,1.2]] },
-  { preset:'heartbeat', dur:4500, zh:'heartbeat · 心跳',        desc:'给你的一颗小心心',               en:'a little red heart, just for you',          cam:[[1.6,13,8.5],[0,0,0.3],[0.6,10,3.2],[0,0,0.2]] },
-  { preset:null,        dur:3500, zh:'',                        desc:'',                               en:'',                                           arc:{r0:12,r1:13.5,h0:7.5,h1:6.0,a0:2.8,a1:4.8}, look:[0,0,0] },
+  { preset:'processing', dur:4200, zh:'codex · 接到任务',   desc:'开始执行 —— 键盘进入工作状态', en:'task received — the board goes to work',
+    cam:[[10,3.2,10.5],[-2,0.3,1.2],[6,4.6,8.4],[0,0,0.6]], term:'task' },
+  { preset:'processing', dur:3600, zh:'codex · 执行中',     desc:'改代码、跑测试 —— 彗星跑马不停', en:'editing, testing — the comet keeps orbiting',
+    arc:{r0:13.5,r1:12.0,h0:6.6,h1:8.2,a0:-0.5,a1:1.6}, look:[0,0,0], term:'working' },
+  { preset:'success',   dur:3400, zh:'success · 任务完成',  desc:'终端全绿 —— 绿色冲击波扫过全板', en:'terminal all green — shockwave',
+    cam:[[-14,2.2,9],[-5,0.5,1.8],[-7,5.0,6.5],[0,0,0.5]], term:'success' },
+  { word:'DONE', textRgb:[80,255,120], dur:4600, zh:'agent → keyboard', desc:'agent 直接在键盘上"写下"结果', en:'the agent writes its result in light',
+    cam:[[1.2,12.5,6],[0,0,0],[0.4,10,3],[0,0,0]], term:'done' },
+  { preset:'failure',   dur:3400, zh:'failure · 任务失败',  desc:'终端报错 —— 右上角红色脉冲 ×3', en:'error — red pulses from top-right',
+    cam:[[15,2.4,9],[6,0.5,-1.5],[8,5.2,6.5],[0,0,0]], term:'error' },
+  { preset:'needInput', dur:4200, zh:'needInput · 等你批准', desc:'终端在问 —— 底行琥珀呼吸等你', en:'approval required — amber breathing',
+    cam:[[7,2.0,11],[0,0,1.8],[3,3.4,8],[0,0,1.2]], term:'approval' },
+  { word:'♥', textRgb:[255,30,60], dur:5000, zh:'agent → keyboard', desc:'任务收尾，agent 送你一颗像素心', en:'the agent sends you a heart', thump:true,
+    cam:[[1.6,13,8.5],[0,0,0.3],[0.6,10,3.2],[0,0,0.2]], term:'love' },
+  { preset:null, dur:3400, zh:'', desc:'', en:'', arc:{r0:12,r1:13.5,h0:7.5,h1:6.0,a0:2.8,a1:4.8}, look:[0,0,0], term:'none' },
 ];
 const TOTAL = SEG.reduce((s,x)=>s+x.dur, 0);
 const smooth = t => t*t*(3-2*t);
@@ -250,7 +359,58 @@ const lerp3 = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2
 
 const capEl = document.querySelector('#caption .name');
 const descEl = document.querySelector('#caption .desc');
+const enEl = document.querySelector('#caption .en');
 const titleEl = document.getElementById('title');
+const tlog = document.getElementById('tlog');
+const termEl = document.getElementById('term');
+const fadeEl = document.getElementById('fade');
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function terminalHTML(kind, t){
+  const cur = Math.floor(t/450)%2 ? '█' : ' ';
+  if (kind==='task'){
+    const typed = esc(`$ codex "ship the release"`.slice(0, Math.floor(t/34)));
+    let h = typed + (t<1400 ? cur : '');
+    if (t>1700) h += `\n<span class="dim">  · planning: 4 steps</span>`;
+    if (t>3000) h += `\n<span class="dim">  · context loaded (12 files)</span>`;
+    return h;
+  }
+  if (kind==='working'){
+    const sp = '⠋⠙⠹⠸⠼⠴⠦⠧'[Math.floor(t/110)%8];
+    let h = `<span class="accent">${sp}</span> editing src/api.ts …`;
+    if (t>1500) h += `\n<span class="accent">${sp}</span> running tests …`;
+    if (t>2400) h += `\n<span class="ok">  128 passed · 0 failed</span>`;
+    return h;
+  }
+  if (kind==='success'){
+    let h = `<span class="ok">✔ build passed</span>`;
+    if (t>700) h += `\n<span class="ok">✔ 128 tests passed</span>`;
+    if (t>1500) h += `\n<span class="ok">✔ deployed in 3.2s</span>`;
+    return h;
+  }
+  if (kind==='done'){
+    let h = `<span class="dim">agent → keyboard:</span>`;
+    if (t>500) h += `\n<span class="ok">"D O N E"</span>`;
+    return h;
+  }
+  if (kind==='error'){
+    let h = `<span class="err">✖ test 47 failed</span>`;
+    if (t>600) h += `\n<span class="dim">  expect(200) → got 500</span>`;
+    if (t>1500) h += `\n<span class="err">✖ retry exhausted</span>`;
+    return h;
+  }
+  if (kind==='approval'){
+    let h = `<span class="warn">⚠ approval required</span>`;
+    if (t>700) h += `\ndeploy to production? (y/n) ${cur}`;
+    return h;
+  }
+  if (kind==='love'){
+    let h = `<span class="dim">agent → keyboard:</span>`;
+    if (t>600) h += `\n<span class="pink">❤</span>`;
+    return h;
+  }
+  return '';
+}
 
 function locate(tMs){
   let acc = 0;
@@ -282,36 +442,61 @@ window.renderFrame = function(tMs){
   if (!loc) return;
   const { seg, segT, pos, look } = loc;
   let camY = pos[1];
-  if (seg.preset === 'heartbeat'){
-    const beat = frameAt(segT, 'heartbeat');
-    const k = beat[KEY_NAMES.indexOf('4')*3] / 255;   // thump 0..0.85
-    camY -= 1.6 * k;
+  if (seg.word === '♥'){
+    const k = frameAt(segT % 1500, 'heartbeat');
+    const kk = k[KEY_NAMES.indexOf('4')*3] / 255;
+    camY -= 1.4 * kk;
   }
   camera.position.set(pos[0], camY, pos[2]);
   camera.lookAt(look[0], look[1], look[2]);
 
-  const buf = seg.preset ? frameAt(segT, seg.preset) : frameAt((segT+400) % 1500, 'heartbeat');
+  let raw;
+  if (seg.preset) raw = frameAt(segT, seg.preset);
+  else if (seg.word) raw = textFrame(seg.word, segT, seg.textRgb, { thump: !!seg.thump });
+  else raw = frameAt((segT+400) % 1500, 'heartbeat');
+  const buf = bleed(raw);
+
   for (let i=0;i<68;i++){
     const r = buf[i*3]/255, g = buf[i*3+1]/255, b = buf[i*3+2]/255;
     const inten = Math.max(r,g,b);
     keys[i].mat.emissive.setRGB(r*1.15, g*1.15, b*1.15);
     keys[i].mat.emissiveIntensity = 0.2 + 0.9*inten;
-    const side = 0.11 + 0.42*inten;
+    const side = 0.10 + 0.34*inten;
     keys[i].mat.color.setRGB(side*0.9, side, side*1.15);
-    keys[i].mesh.position.y = 0.06 - 0.045*inten;   // tactile press-in when lit
+    keys[i].mesh.position.y = keys[i].baseY - 0.045*inten;
+    const sc = sprites[i].material;
+    sc.color.setRGB(r, g, b);
+    sc.opacity = inten * 0.7;
+    const s = 0.8 + 1.7*inten;
+    sprites[i].scale.set(s, s, 1);
+    const pm = pools[i].material;
+    pm.color.setRGB(r, g, b);
+    pm.opacity = inten * 0.42;
+    const ps = 1.1 + 1.4*inten;
+    pools[i].scale.set(ps, ps, 1);
+  }
+  for (const { mat, i } of tops){
+    const r = buf[i*3]/255, g = buf[i*3+1]/255, b = buf[i*3+2]/255;
+    const inten = Math.max(r,g,b)/255;
+    mat.color.setRGB(0.62 + 0.38*r/255, 0.62 + 0.38*g/255, 0.62 + 0.38*b/255);
+    mat.opacity = 0.45 + 0.55*inten;
   }
 
-  /* captions: slide+fade in over 260ms, out over 220ms */
+  /* terminal dialogue */
+  const termIn = clamp01(segT/300), termOut = clamp01((seg.dur-segT)/250);
+  termEl.style.opacity = (seg.term && seg.term !== 'none') ? Math.min(termIn, termOut) : 0;
+  if (seg.term) tlog.innerHTML = terminalHTML(seg.term, segT);
+
+  /* captions */
   const capIn = clamp01(segT/260), capOut = clamp01((seg.dur-segT)/220);
   const capA = seg.zh ? Math.min(capIn, capOut) : 0;
   capEl.parentElement.style.opacity = capA;
   capEl.parentElement.style.transform = `translateY(${(1-capIn)*14}px)`;
   capEl.textContent = seg.zh || '';
   descEl.textContent = seg.desc || '';
-  document.querySelector('#caption .en').textContent = seg.en || '';
+  enEl.textContent = seg.en || '';
 
-  /* crossfade dip at every segment boundary */
-  const fadeEl = document.getElementById('fade');
+  /* boundary crossfade */
   const out = 1 - clamp01(segT/150);
   const inn = 1 - clamp01((seg.dur-segT)/150);
   fadeEl.style.opacity = Math.max(out, inn).toFixed(3);
