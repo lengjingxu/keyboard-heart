@@ -10,6 +10,9 @@
   #caption{position:absolute;left:48px;bottom:44px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
   #caption .name{font-size:40px;font-weight:700;letter-spacing:.5px}
   #caption .desc{font-size:20px;color:#9aa4b5;margin-top:6px}
+  #caption .en{font-size:15px;color:#69738a;margin-top:4px;letter-spacing:.3px}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 52%, rgba(0,0,0,.58) 100%)}
+  #fade{position:absolute;inset:0;background:#000;opacity:0}
   #brand{position:absolute;left:48px;top:40px;color:#e8ecf4;text-shadow:0 2px 14px rgba(0,0,0,.8)}
   #brand .t{font-size:30px;font-weight:800;letter-spacing:1px}
   #brand .t em{color:#ff3b5c;font-style:normal}
@@ -25,8 +28,10 @@
 <body>
 <div id="app"></div>
 <div id="overlay">
+  <div id="vignette"></div>
   <div id="brand"><div class="t">keyboard<em>-</em>heart</div><div class="s">A keyboard status light for AI coding agents</div></div>
-  <div id="caption"><div class="name"></div><div class="desc"></div></div>
+  <div id="caption"><div class="name"></div><div class="desc"></div><div class="en"></div></div>
+  <div id="fade"></div>
   <div id="title"><div class="t">keyboard<em>-</em>heart</div>
     <div class="s">给 Codex / Claude Code 一个键盘状态灯 · A keyboard status light for AI coding agents</div>
     <div class="u">github.com/lengjingxu/keyboard-heart</div></div>
@@ -44,6 +49,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /* ---------- canonical 65% layout (from profiles/layouts/65.json) ---------- */
 const KEY_NAMES = [
@@ -145,12 +151,36 @@ keyLight.position.set(6, 18, 10); scene.add(keyLight);
 const rim = new THREE.DirectionalLight(0x5a7dff, 1.1); rim.position.set(-12, 8, -14); scene.add(rim);
 
 /* keycaps */
-const caseGeo = new THREE.BoxGeometry(18.6, 0.7, 6.6);
+const caseGeo = new RoundedBoxGeometry(18.6, 0.7, 6.6, 4, 0.14);
 const caseMat = new THREE.MeshStandardMaterial({ color:0x2a2f3a, metalness:0.85, roughness:0.35 });
 const plate = new THREE.Mesh(caseGeo, caseMat); plate.position.y = -0.42; scene.add(plate);
 
-const capGeo = new THREE.BoxGeometry(0.86, 0.34, 0.86);
-const topGeo = new THREE.PlaneGeometry(0.72, 0.72);
+/* brand etch on the case wrist area */
+{
+  const c = document.createElement('canvas'); c.width = 512; c.height = 64;
+  const g = c.getContext('2d');
+  g.font = '700 30px -apple-system, Helvetica'; g.fillStyle = 'rgba(160,175,200,0.55)';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  g.fillText('keyboard-heart', 500, 32);
+  const t = new THREE.CanvasTexture(c);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.42),
+    new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.7 }));
+  m.rotation.x = -Math.PI/2; m.position.set(6.6, -0.062, 2.72);
+  scene.add(m);
+}
+
+/* tapered keycap: top face 0.78× of base, like a real sculpted cap */
+function taperedCapGeo(){
+  const geo = new THREE.BoxGeometry(0.86, 0.34, 0.86, 1, 1, 1);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    if (pos.getY(i) > 0) { pos.setX(i, pos.getX(i) * 0.78); pos.setZ(i, pos.getZ(i) * 0.78); }
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+const capGeo = taperedCapGeo();
+const topGeo = new THREE.PlaneGeometry(0.62, 0.62);
 const keys = [], tops = [], glow = new Array(68).fill(0);
 const keyGroup = new THREE.Group(); scene.add(keyGroup);
 const mirrorGroup = new THREE.Group(); mirrorGroup.scale.y = -1; scene.add(mirrorGroup);
@@ -193,7 +223,9 @@ const desk = new THREE.Mesh(new THREE.PlaneGeometry(120, 120),
   new THREE.MeshStandardMaterial({ color:0x070a12, metalness:0.75, roughness:0.25, transparent:true, opacity:0.86 }));
 desk.rotation.x = -Math.PI/2; desk.position.y = -0.9; scene.add(desk);
 const grid2 = new THREE.GridHelper(120, 60, 0x0e1626, 0x0a0f1a);
-grid2.position.y = -0.895; scene.add(grid2);
+grid2.position.y = -0.895;
+grid2.material.transparent = true; grid2.material.opacity = 0.35;
+scene.add(grid2);
 
 /* postprocessing */
 const composer = new EffectComposer(renderer);
@@ -204,13 +236,13 @@ composer.addPass(new OutputPass());
 
 /* ---------- camera timeline ---------- */
 const SEG = [
-  { preset:'success',   dur:3200, zh:'success · 任务完成',      desc:'绿色冲击波，从左下角扫过全板',   cam:[[-15,2.0,10],[-5,0.5,2.0],[-8,5.0,7],[0,0,0.6]] },
-  { preset:'failure',   dur:3200, zh:'failure · 任务失败',      desc:'右上角红色脉冲 ×3',              cam:[[15,2.4,9],[6,0.5,-1.5],[8,5.2,6.5],[0,0,0]] },
-  { preset:'notify',    dur:2400, zh:'notify · 通知',           desc:'白色涟漪，从中心扩散',           cam:[[-4,11,7],[0,0,0],[0,9,3],[0,0,0]] },
-  { preset:'processing',dur:5000, zh:'processing · 处理中',     desc:'青色彗星绕外圈跑马（长驻）',     arc:{r0:13.5,r1:12.0,h0:6.6,h1:8.2,a0:-0.5,a1:2.6}, look:[0,0,0] },
-  { preset:'needInput', dur:4000, zh:'needInput · 需要你',      desc:'琥珀逐行生长，底行呼吸（长驻）', cam:[[7,2.0,11],[0,0,1.8],[3,3.4,8],[0,0,1.2]] },
-  { preset:'heartbeat', dur:4500, zh:'heartbeat · 心跳',        desc:'给你的一颗小心心',               cam:[[1.6,13,8.5],[0,0,0.3],[0.6,10,3.2],[0,0,0.2]] },
-  { preset:null,        dur:3500, zh:'',                        desc:'',                               arc:{r0:12,r1:13.5,h0:7.5,h1:6.0,a0:2.8,a1:4.8}, look:[0,0,0] },
+  { preset:'success',   dur:3200, zh:'success · 任务完成',      desc:'绿色冲击波，从左下角扫过全板',   en:'green shockwave sweeping the board',        cam:[[-15,2.0,10],[-5,0.5,2.0],[-8,5.0,7],[0,0,0.6]] },
+  { preset:'failure',   dur:3200, zh:'failure · 任务失败',      desc:'右上角红色脉冲 ×3',              en:'red pulse bursts from the top-right',       cam:[[15,2.4,9],[6,0.5,-1.5],[8,5.2,6.5],[0,0,0]] },
+  { preset:'notify',    dur:2400, zh:'notify · 通知',           desc:'白色涟漪，从中心扩散',           en:'white ripple from the center',              cam:[[-4,11,7],[0,0,0],[0,9,3],[0,0,0]] },
+  { preset:'processing',dur:5000, zh:'processing · 处理中',     desc:'青色彗星绕外圈跑马（长驻）',     en:'cyan comet orbiting the perimeter (sticky)', arc:{r0:13.5,r1:12.0,h0:6.6,h1:8.2,a0:-0.5,a1:2.6}, look:[0,0,0] },
+  { preset:'needInput', dur:4000, zh:'needInput · 需要你',      desc:'琥珀逐行生长，底行呼吸（长驻）', en:'amber rows growing up, bottom breathing (sticky)', cam:[[7,2.0,11],[0,0,1.8],[3,3.4,8],[0,0,1.2]] },
+  { preset:'heartbeat', dur:4500, zh:'heartbeat · 心跳',        desc:'给你的一颗小心心',               en:'a little red heart, just for you',          cam:[[1.6,13,8.5],[0,0,0.3],[0.6,10,3.2],[0,0,0.2]] },
+  { preset:null,        dur:3500, zh:'',                        desc:'',                               en:'',                                           arc:{r0:12,r1:13.5,h0:7.5,h1:6.0,a0:2.8,a1:4.8}, look:[0,0,0] },
 ];
 const TOTAL = SEG.reduce((s,x)=>s+x.dur, 0);
 const smooth = t => t*t*(3-2*t);
@@ -266,14 +298,26 @@ window.renderFrame = function(tMs){
     keys[i].mat.emissiveIntensity = 0.2 + 0.9*inten;
     const side = 0.11 + 0.42*inten;
     keys[i].mat.color.setRGB(side*0.9, side, side*1.15);
+    keys[i].mesh.position.y = 0.06 - 0.045*inten;   // tactile press-in when lit
   }
 
+  /* captions: slide+fade in over 260ms, out over 220ms */
+  const capIn = clamp01(segT/260), capOut = clamp01((seg.dur-segT)/220);
+  const capA = seg.zh ? Math.min(capIn, capOut) : 0;
+  capEl.parentElement.style.opacity = capA;
+  capEl.parentElement.style.transform = `translateY(${(1-capIn)*14}px)`;
   capEl.textContent = seg.zh || '';
   descEl.textContent = seg.desc || '';
-  capEl.parentElement.style.opacity = seg.zh ? 1 : 0;
+  document.querySelector('#caption .en').textContent = seg.en || '';
+
+  /* crossfade dip at every segment boundary */
+  const fadeEl = document.getElementById('fade');
+  const out = 1 - clamp01(segT/150);
+  const inn = 1 - clamp01((seg.dur-segT)/150);
+  fadeEl.style.opacity = Math.max(out, inn).toFixed(3);
+
   titleEl.style.opacity = (loc.index === SEG.length-1) ? clamp01((segT-800)/900) : 0;
 
-  window.__dbg = { cam: camera.position.toArray(), look: [look[0],look[1],look[2]], segT, preset: seg.preset, tMs };
   composer.render();
 };
 

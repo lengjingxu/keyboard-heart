@@ -99,7 +99,28 @@ async function main() {
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS),
     '-i', path.join(FRAME_DIR, 'f_%05d.jpg'), '-c:v', 'libx264', '-crf', '18',
     '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4]);
-  console.log('mp4:', mp4);
+  console.log('mp4 (silent):', mp4);
+
+  /* soundtrack: dark ambient pad + heartbeat kicks aligned to the
+     heartbeat segment (starts 17.8s, cycle 1.5s, thumps at +0.18s/+0.38s) */
+  const DUR = 25.8;
+  const HB_START = 17.8;
+  const kicks = [];
+  for (let c = 0; c < 3; c++) kicks.push(HB_START + 1.5 * c + 0.18, HB_START + 1.5 * c + 0.38);
+  const kickTerms = kicks.map(Tk =>
+    `0.5*exp(-24*gt(t-${Tk.toFixed(3)},0))*sin(2*PI*52*gt(t-${Tk.toFixed(3)},0))*gte(t-${Tk.toFixed(3)},0)*lt(t-${Tk.toFixed(3)},0.4)`
+  ).join('+');
+  const padExpr = `0.05*sin(2*PI*55*t)*sin(2*PI*0.05*t)+0.035*sin(2*PI*82.41*t)*sin(2*PI*0.033*t)+0.02*sin(2*PI*110*t)*sin(2*PI*0.021*t)`;
+  const wav = path.join(OUT, 'sound.wav');
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error',
+    '-f', 'lavfi', '-i', `aevalsrc='${padExpr}+${kickTerms}':d=${DUR}:s=44100`,
+    '-af', 'afade=t=in:d=1.2,afade=t=out:st=24.8:d=1', '-ac', '2', wav]);
+
+  const final = path.join(OUT, 'keyboard-heart-3d.mp4.tmp.mp4');
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', mp4, '-i', wav,
+    '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', final]);
+  fs.renameSync(final, mp4);
+  console.log('mp4 (with soundtrack):', mp4);
 
   const gif = path.join(OUT, 'hero.gif');
   const palette = path.join(OUT, 'palette.png');
