@@ -1,5 +1,7 @@
 # keyboard-heart ⌨️❤️
 
+[English](README_EN.md) | 简体中文
+
 **给 Codex、Claude Code 和所有 AI 编码工具一个键盘状态灯**：AI 完成任务 → 绿色波纹扫过键盘；报错 → 右上角红色脉冲 ×3；等待你的批准 → 底行琥珀逐行生长。本地 REST + WebSocket 服务，两条接线方式：
 
 - **hooks 自动接线**（AI 无感知）：Codex 加一行 `notify` / `hooks` 配置，Claude Code 合并一段 hooks JSON——AI 每次答完/请求批准，灯光自动反馈
@@ -183,7 +185,7 @@ KB_BACKEND=via npm start
 
 默认 `KB_BACKEND=hid` 走 MCHOSE 直连协议（profiles/ 档案表）。
 
-
+## 接入 AI 编码工具
 
 两条路线可以叠加：**hooks 自动触发**（工具生命周期事件直连灯光，AI 无感知）+ **提示词驱动**（写进 CLAUDE.md/AGENTS.md，AI 按任务状态自主调用）。
 
@@ -238,7 +240,7 @@ bin/kbctl.js       CLI 客户端
 heart.js           离线 CLI（不依赖服务，直接驱动设备）
 ```
 
-新增键盘支持：在 `lib/grid.js` 的 `PROFILES` 加一条（vendorId/productId/键位表），键位表可从厂商控制台资产提取，`node heart.js rainbow` 实拍校准。
+新增键盘支持：往 `profiles/` 加一个 JSON 档案（vendorId/productId/键位表），不需要改代码——三条提取路线与真机校准清单见 [贡献指南](docs/CONTRIBUTING-PROFILES.md)。
 
 ## 致谢
 
