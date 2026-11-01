@@ -101,38 +101,42 @@ async function main() {
     '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4]);
   console.log('mp4 (silent):', mp4);
 
-  /* soundtrack: dark ambient pad + heartbeat kicks aligned to the
-     heartbeat segment (starts 17.8s, cycle 1.5s, thumps at +0.18s/+0.38s) */
-  const DUR = 31.8;
-  const HB_START = 23.4;
+  /* soundtrack: 96bpm — kick every beat, hats on 8ths, bass per bar, riser into the love act */
+  const DUR = 31.25, BPM = 96, BEAT = 60/BPM;
   const kicks = [];
-  for (let c = 0; c < 3; c++) kicks.push(HB_START + 1.5 * c + 0.18, HB_START + 1.5 * c + 0.38);
+  for (let b = 4; b*BEAT < DUR - 0.3; b++) kicks.push(b*BEAT);
   const kickTerms = kicks.map(Tk =>
-    `0.5*exp(-24*gt(t-${Tk.toFixed(3)},0))*sin(2*PI*52*gt(t-${Tk.toFixed(3)},0))*gte(t-${Tk.toFixed(3)},0)*lt(t-${Tk.toFixed(3)},0.4)`
+    `0.42*exp(-26*gt(t-${Tk.toFixed(4)},0))*sin(2*PI*50*gt(t-${Tk.toFixed(4)},0))*gte(t-${Tk.toFixed(4)},0)*lt(t-${Tk.toFixed(4)},0.32)`
   ).join('+');
-  const padExpr = `0.05*sin(2*PI*55*t)*sin(2*PI*0.05*t)+0.035*sin(2*PI*82.41*t)*sin(2*PI*0.033*t)+0.02*sin(2*PI*110*t)*sin(2*PI*0.021*t)`;
+  const hats = [];
+  for (let b = 8; b*BEAT/2 < DUR - 0.3; b++) hats.push(b*BEAT/2 + BEAT/4);
+  const hatTerms = hats.map(Tk =>
+    `0.05*(random(${'{'}t*997${'}'})*2-1)*exp(-150*gt(t-${Tk.toFixed(4)},0))*gte(t-${Tk.toFixed(4)},0)*lt(t-${Tk.toFixed(4)},0.05)`
+  ).join('+');
+  const riser = `0.10*sin(2*PI*(280+900*min(gt(t-21.25,0)/1.25,1))*gt(t-21.25,0))*lt(t-21.25,1.25)*gte(t-21.25,0)*exp(-1.5*gt(t-21.25,0))`;
+  const padExpr = `0.045*sin(2*PI*55*t)*sin(2*PI*0.05*t)+0.03*sin(2*PI*82.41*t)*sin(2*PI*0.033*t)+0.018*sin(2*PI*110*t)*sin(2*PI*0.021*t)`;
   const wav = path.join(OUT, 'sound.wav');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error',
-    '-f', 'lavfi', '-i', `aevalsrc='${padExpr}+${kickTerms}':d=${DUR}:s=44100`,
-    '-af', 'afade=t=in:d=1.2,afade=t=out:st=30.8:d=1', '-ac', '2', wav]);
+    '-f', 'lavfi', '-i', `aevalsrc='${padExpr}+${kickTerms}+${hatTerms}+${riser}':d=${DUR}:s=44100`,
+    '-af', 'afade=t=in:d=0.8,afade=t=out:st=30.3:d=0.95', '-ac', '2', wav]);
 
   const final = path.join(OUT, 'keyboard-heart-3d.mp4.tmp.mp4');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', mp4, '-i', wav,
     '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', final]);
   fs.renameSync(final, mp4);
-  console.log('mp4 (with soundtrack):', mp4);
+  console.log('mp4 (with 96bpm soundtrack):', mp4);
 
   const gif = path.join(OUT, 'hero.gif');
   const palette = path.join(OUT, 'palette.png');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, 'f_%05d.jpg'), '-frames:v', '120',
     '-vf', 'fps=10,scale=520:-1:flags=lanczos,palettegen=stats_mode=diff', palette]);
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, 'f_%05d.jpg'), '-i', palette,
-    '-filter_complex', '[0:v]trim=start_frame=562:end_frame=682,fps=10,scale=520:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3',
+    '-filter_complex', '[0:v]trim=start_frame=570:end_frame=690,fps=10,scale=520:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3',
     '-loop', '0', gif]);
   console.log('gif:', gif);
 
   const og = path.join(OUT, 'og.png');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, stillFrame('done', 1700)),
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, stillFrame('done', 2000)),
     '-vf', 'scale=1200:630:force_original_aspect_ratio=increase,crop=1200:630', og]);
   console.log('og:', og);
 
@@ -145,7 +149,7 @@ function locateFrame(preset, intoMs) { return { preset, intoMs }; }
 /* full 24fps timeline over all segments */
 function fullTimeline() {
   // mirror of the page's SEG durations
-  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
+  const SEG = [['intro', 2500], ['task', 2500], ['working', 2500], ['success', 3750], ['done', 3750], ['failure', 3750], ['needInput', 3750], ['love', 5000], ['outro', 3750]];
   const frames = [];
   let acc = 0;
   for (const [, dur] of SEG) {
@@ -157,7 +161,7 @@ function fullTimeline() {
 
 /* sparse sampling across segments for look review */
 function sampleFrames() {
-  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
+  const SEG = [['intro', 2500], ['task', 2500], ['working', 2500], ['success', 3750], ['done', 3750], ['failure', 3750], ['needInput', 3750], ['love', 5000], ['outro', 3750]];
   const frames = [];
   let acc = 0;
   for (const [preset, dur] of SEG) {
@@ -169,7 +173,7 @@ function sampleFrames() {
 
 function stillFrame(preset, intoMs) {
   // find the frame FILENAME whose segment+time matches
-  const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
+  const SEG = [['intro', 2500], ['task', 2500], ['working', 2500], ['success', 3750], ['done', 3750], ['failure', 3750], ['needInput', 3750], ['love', 5000], ['outro', 3750]];
   let idx = 0;
   for (const [p, dur] of SEG) {
     for (let t = 0; t < dur; t += 1000 / FPS) {
