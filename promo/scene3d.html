@@ -231,7 +231,7 @@ function bleed(buf){
 /* ---------- three.js: room, desk, keyboard ---------- */
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(1);
+renderer.setPixelRatio(1.5);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -318,7 +318,7 @@ keyGroup.add(kcase);
 }
 
 function taperedCapGeo(){
-  const geo = new RoundedBoxGeometry(0.86, 0.34, 0.86, 2, 0.06);
+  const geo = new RoundedBoxGeometry(0.86, 0.34, 0.86, 4, 0.06);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     if (pos.getY(i) > 0.06) { pos.setX(i, pos.getX(i) * 0.8); pos.setZ(i, pos.getZ(i) * 0.8); }
@@ -333,22 +333,25 @@ const keys = [], tops = [];
 keyGroup.rotation.x = -0.088; keyGroup.position.set(0, -0.35, 0.2);
 
 function legendTexture(txt){
-  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
   const g = c.getContext('2d');
-  g.clearRect(0,0,96,96);
-  g.font = '600 34px -apple-system, Helvetica';
+  g.clearRect(0,0,128,128);
+  g.font = `600 ${txt.length===1 ? 40 : 24}px -apple-system, Helvetica`;
   g.fillStyle = '#ffffff';
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(txt, 48, 50);
-  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+  g.fillText(txt, 64, 66);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 8; return t;
 }
-function legendFor(name){ return LEGEND[name] ?? (name.length===1?name:''); }
+const WIDE_LEGEND = { Backspace:'Back', CapsLock:'Caps', Enter:'Enter', LShift:'Shift', RShift:'Shift',
+                      Del:'Del', Ins:'Ins', PgUp:'PgU', PgDn:'PgD', Space:'♥' };
+function legendFor(name){ return LEGEND[name] ?? WIDE_LEGEND[name] ?? (name.length===1?name:''); }
 
 KEY_NAMES.forEach((name,i)=>{
   const [xc, w] = GEO[i];
   const [gx,gy] = KEY_POS[i];
   const x = xc - 8.375, z = gy*1.0 - 2.0;
-  const mat = new THREE.MeshStandardMaterial({ color:0x10131a, metalness:0.35, roughness:0.45,
+  const mat = new THREE.MeshPhysicalMaterial({ color:0x10131a, metalness:0.3, roughness:0.42,
+    clearcoat: 0.55, clearcoatRoughness: 0.3,
     emissive: new THREE.Color(0,0,0) });
   const cap = new THREE.Mesh(capGeo, mat);
   cap.scale.x = w*0.94; cap.position.set(x, 0.10, z);
@@ -369,6 +372,19 @@ KEY_NAMES.forEach((name,i)=>{
 const mirrorGroup = new THREE.Group(); mirrorGroup.scale.y = -1; scene.add(mirrorGroup);
 mirrorGroup.add(keyGroup.clone());
 mirrorGroup.position.y = -1.62;   // reflection under the tilted board
+
+/* USB cable from the case top-right */
+{
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(8.1, 0.30, -1.6), new THREE.Vector3(9.3, 0.55, -2.6),
+    new THREE.Vector3(10.4, 1.35, -3.6), new THREE.Vector3(11.2, 2.1, -4.9),
+  ]);
+  const cable = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 32, 0.085, 10),
+    new THREE.MeshStandardMaterial({ color: 0x14161a, roughness: 0.6, metalness: 0.2 }));
+  cable.castShadow = true;
+  keyGroup.add(cable);
+}
 
 /* desk light pools: one additive canvas lightmap over the board area (real color mixing) */
 const LM_W = 512, LM_H = 192;
@@ -411,6 +427,7 @@ function paintLightmap(buf){
 
 /* postprocessing */
 const composer = new EffectComposer(renderer);
+composer.setPixelRatio(1.5);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.38, 0.82);
 composer.addPass(bloom);

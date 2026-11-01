@@ -18,7 +18,7 @@ const { spawn } = require('child_process');
 const WebSocket = require('ws');
 
 const PORT = 9344;
-const FPS = 24;
+const FPS = 30;
 const OUT = path.join(__dirname, 'out');
 const FRAME_DIR = path.join(OUT, 'frames');
 const PAGE = 'file://' + path.join(__dirname, 'scene3d.html');
@@ -111,7 +111,7 @@ async function main() {
   const hats = [];
   for (let b = 8; b*BEAT/2 < DUR - 0.3; b++) hats.push(b*BEAT/2 + BEAT/4);
   const hatTerms = hats.map(Tk =>
-    `0.05*(random(${'{'}t*997${'}'})*2-1)*exp(-150*gt(t-${Tk.toFixed(4)},0))*gte(t-${Tk.toFixed(4)},0)*lt(t-${Tk.toFixed(4)},0.05)`
+    `0.05*exp(-150*gt(t-${Tk.toFixed(4)},0))*sin(2*PI*1800*gt(t-${Tk.toFixed(4)},0))*gte(t-${Tk.toFixed(4)},0)*lt(t-${Tk.toFixed(4)},0.04)`
   ).join('+');
   const riser = `0.10*sin(2*PI*(280+900*min(gt(t-21.25,0)/1.25,1))*gt(t-21.25,0))*lt(t-21.25,1.25)*gte(t-21.25,0)*exp(-1.5*gt(t-21.25,0))`;
   const padExpr = `0.045*sin(2*PI*55*t)*sin(2*PI*0.05*t)+0.03*sin(2*PI*82.41*t)*sin(2*PI*0.033*t)+0.018*sin(2*PI*110*t)*sin(2*PI*0.021*t)`;
