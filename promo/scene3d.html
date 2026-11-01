@@ -120,7 +120,9 @@ function frameAt(tMs, preset, periodOverride) {
   const paint = (i, rgb, k) => { for (let c=0;c<3;c++) buf[i*3+c] = Math.max(buf[i*3+c], Math.round(rgb[c]*k)); };
   if (preset==='success'){
     const radius = clamp01(tMs/1200) * maxDist(0,4) * 1.25;
-    for (let i=0;i<68;i++){ const d=dist(i,0,4); paint(i,[0,255,60], gauss(d-radius,0.55)); }
+    for (let i=0;i<68;i++){ const d=dist(i,0,4);
+      paint(i,[0,255,60], gauss(d-radius,0.55) + 0.5*gauss(d-(radius-0.95),0.6));
+    }
   } else if (preset==='failure'){
     const PULSE=850,GAP=80,CYCLE=PULSE+GAP,EXPAND=320,HOLD=180,MAX_R=4.2,PULSES=3;
     const pulse=Math.floor(tMs/CYCLE); if(pulse>=PULSES) return buf;
@@ -444,6 +446,69 @@ function paintLightmap(buf){
   lmTex.needsUpdate = true;
 }
 
+/* background monitor: dim code screen telling 'the agent is working' */
+const codeScreen = (() => {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 300;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0a1420'; g.fillRect(0,0,512,300);
+  const colors = ['#3e6a9e','#3e9e6a','#9e8f3e','#7a5a9e','#3e9e9e'];
+  for (let i=0;i<26;i++){
+    const y = 14+i*11, w = 30+Math.random()*230;
+    g.fillStyle = colors[i%5]; g.globalAlpha = 0.55+Math.random()*0.35;
+    g.fillRect(18+Math.random()*40, y, w, 5);
+  }
+  g.globalAlpha = 1;
+  return new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.5),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), toneMapped: false }));
+})();
+codeScreen.position.set(-7.5, 3.4, -10.5); codeScreen.rotation.y = 0.42; scene.add(codeScreen);
+
+/* drifting desk fog (two scrolling noise layers, additive) */
+function fogNoiseTexture(seed){
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(0,0,0,0)'; g.clearRect(0,0,256,128);
+  for (let i=0;i<40;i++){
+    const x = Math.random()*256, y = Math.random()*128, r = 18+Math.random()*40;
+    const gr = g.createRadialGradient(x,y,0,x,y,r);
+    gr.addColorStop(0, 'rgba(140,160,200,0.10)');
+    gr.addColorStop(1, 'rgba(140,160,200,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x,y,r,0,7); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const fogA = fogNoiseTexture(), fogB = fogNoiseTexture();
+const fogPlanes = [];
+for (const [tex, y, op] of [[fogA, -0.55, 0.05], [fogB, -0.3, 0.035]]) {
+  const fp = new THREE.Mesh(new THREE.PlaneGeometry(34, 12),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+  fp.rotation.x = -Math.PI/2; fp.position.set(0, y, 0);
+  scene.add(fp); fogPlanes.push({ mesh: fp, tex, speed: op > 0.04 ? 0.000018 : 0.000011 });
+}
+
+/* dust motes drifting in the light */
+const moteTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(c);
+})();
+const motes = [];
+{
+  const mmat = new THREE.SpriteMaterial({ map: moteTex, color: 0xbdd2ff, transparent: true,
+    opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
+  for (let i=0;i<26;i++){
+    const sp = new THREE.Sprite(mmat.clone());
+    sp.position.set(-8+Math.random()*16, 0.4+Math.random()*3.6, -5+Math.random()*6);
+    const s = 0.05+Math.random()*0.09; sp.scale.set(s,s,1);
+    scene.add(sp); motes.push({ sp, seed: Math.random()*10 });
+  }
+}
+
 /* fake volumetric shafts from upper-left */
 {
   const shaftMat = new THREE.MeshBasicMaterial({ color: 0x8fb2ff, transparent: true, opacity: 0.018,
@@ -614,6 +679,15 @@ window.renderFrame = function(tMs){
     mat.emissiveIntensity = 0.1 + 2.0*inten;           // legends shine through when lit
   }
   paintLightmap(buf);
+
+  /* ambient life: fog drift, dust motes, monitor flicker */
+  for (const f of fogPlanes) { f.tex.offset.x = (tMs * f.speed) % 1; f.tex.offset.y = (tMs * f.speed * 0.6) % 1; }
+  for (const m of motes) {
+    m.sp.position.y += 0.004;
+    m.sp.position.x += Math.sin(tMs*0.001 + m.seed) * 0.004;
+    if (m.sp.position.y > 4.2) m.sp.position.y = 0.4;
+  }
+  codeScreen.material.color.setScalar(0.92 + 0.08*Math.sin(tMs*0.013));
 
   bokeh.uniforms['focus'].value = camera.position.length();
 
