@@ -191,7 +191,7 @@ const NB = (() => {
     const [x,y]=KEY_POS[i]; const arr=[];
     for(let j=0;j<68;j++){ if(j===i) continue;
       const d=Math.hypot(KEY_POS[j][0]-x,KEY_POS[j][1]-y);
-      if(d<=1.9) arr.push([j, Math.exp(-d*d/(2*0.55*0.55))]);
+      if(d<=1.2) arr.push([j, Math.exp(-d*d/(2*0.42*0.42))]);
     }
     list.push(arr);
   }
@@ -202,7 +202,7 @@ function bleed(buf){
   for(let i=0;i<68;i++){
     for(let c=0;c<3;c++){
       let s=0; for(const [j,w] of NB[i]) s += buf[j*3+c]*w;
-      out[i*3+c] = Math.min(255, buf[i*3+c] + s*0.32);
+      out[i*3+c] = Math.min(255, buf[i*3+c] + s*0.13);
     }
   }
   return out;
@@ -310,11 +310,11 @@ for (let i=0;i<68;i++){
   const x = gx - 7.5, z = gy - 2.0;
   const sm = new THREE.SpriteMaterial({ map: glowTex, color: 0x000000, transparent: true, opacity: 0,
     blending: THREE.AdditiveBlending, depthWrite: false });
-  const sp = new THREE.Sprite(sm); sp.position.set(x, 0.55, z); sp.scale.set(0.9,0.9,1);
+  const sp = new THREE.Sprite(sm); sp.position.set(x, 0.34, z); sp.scale.set(0.55,0.55,1);
   scene.add(sp); sprites.push(sp);
   const pm = new THREE.MeshBasicMaterial({ map: glowTex, color: 0x000000, transparent: true, opacity: 0,
     blending: THREE.AdditiveBlending, depthWrite: false });
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.6), pm);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5), pm);
   pool.rotation.x = -Math.PI/2; pool.position.set(x, -0.86, z);
   scene.add(pool); pools.push(pool);
 }
@@ -331,7 +331,7 @@ scene.add(grid2);
 /* postprocessing */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.5, 0.72);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.38, 0.82);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -460,19 +460,19 @@ window.renderFrame = function(tMs){
     const r = buf[i*3]/255, g = buf[i*3+1]/255, b = buf[i*3+2]/255;
     const inten = Math.max(r,g,b);
     keys[i].mat.emissive.setRGB(r*1.15, g*1.15, b*1.15);
-    keys[i].mat.emissiveIntensity = 0.2 + 0.9*inten;
+    keys[i].mat.emissiveIntensity = 0.2 + 1.15*inten;
     const side = 0.10 + 0.34*inten;
     keys[i].mat.color.setRGB(side*0.9, side, side*1.15);
     keys[i].mesh.position.y = keys[i].baseY - 0.045*inten;
     const sc = sprites[i].material;
     sc.color.setRGB(r, g, b);
-    sc.opacity = inten * 0.7;
-    const s = 0.8 + 1.7*inten;
+    sc.opacity = inten * 0.26;
+    const s = 0.55 + 0.55*inten;
     sprites[i].scale.set(s, s, 1);
     const pm = pools[i].material;
     pm.color.setRGB(r, g, b);
-    pm.opacity = inten * 0.42;
-    const ps = 1.1 + 1.4*inten;
+    pm.opacity = inten * 0.16;
+    const ps = 0.8 + 0.65*inten;
     pools[i].scale.set(ps, ps, 1);
   }
   for (const { mat, i } of tops){

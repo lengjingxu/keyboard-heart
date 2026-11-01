@@ -124,10 +124,11 @@ async function main() {
 
   const gif = path.join(OUT, 'hero.gif');
   const palette = path.join(OUT, 'palette.png');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(FRAME_DIR, 'f_%05d.jpg'),
-    '-vf', 'fps=12,scale=800:-1:flags=lanczos,palettegen=stats_mode=diff', palette]);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(FRAME_DIR, 'f_%05d.jpg'),
-    '-i', palette, '-lavfi', 'fps=12,scale=800:-1:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3', gif]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, 'f_%05d.jpg'), '-frames:v', '120',
+    '-vf', 'fps=10,scale=520:-1:flags=lanczos,palettegen=stats_mode=diff', palette]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(FRAME_DIR, 'f_%05d.jpg'), '-i', palette,
+    '-filter_complex', '[0:v]trim=start_frame=562:end_frame=682,fps=10,scale=520:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3',
+    '-loop', '0', gif]);
   console.log('gif:', gif);
 
   const og = path.join(OUT, 'og.png');
@@ -166,7 +167,7 @@ function sampleFrames() {
   return frames;
 }
 
-function stillFrame({ preset, intoMs }) {
+function stillFrame(preset, intoMs) {
   // find the frame FILENAME whose segment+time matches
   const SEG = [['task', 4200], ['working', 3600], ['success', 3400], ['done', 4600], ['failure', 3400], ['needInput', 4200], ['love', 5000], ['outro', 3400]];
   let idx = 0;
