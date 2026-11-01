@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * render.js — deterministic offline renderer for the 3D promo.
- * Launches an isolated Chrome over CDP, steps promo/photoreal.html frame by
+ * Launches an isolated Chrome over CDP, steps promo/scene3d.html frame by
  * frame (renderFrame(t)), captures each frame, then assembles:
  *   promo/out/keyboard-heart-3d.mp4   (1080p24)
  *   promo/out/hero.gif                (640px loop)
@@ -76,7 +76,7 @@ async function main() {
   await call('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await call('Page.navigate', { url: PAGE });
   let ready = false;
-  for (let i = 0; i < 60 && !ready; i++) { await sleep(500); try { ready = await evaluate('window.__pollReady ? (window.__pollReady() === true) : (window.__ready === true)'); } catch {} }
+  for (let i = 0; i < 60 && !ready; i++) { await sleep(500); try { ready = await evaluate('(window.__pollReady ? window.__pollReady() : window.__ready === true) === true'); } catch {} }
   if (!ready) throw new Error('scene failed to load (CDN?)');
   const total = await evaluate('window.__total');
   console.log(`scene ready, total ${total}ms`);
@@ -113,6 +113,7 @@ async function main() {
   const hatTerms = hats.map(Tk =>
     `0.05*exp(-150*gt(t-${Tk.toFixed(4)},0))*sin(2*PI*1800*gt(t-${Tk.toFixed(4)},0))*gte(t-${Tk.toFixed(4)},0)*lt(t-${Tk.toFixed(4)},0.04)`
   ).join('+');
+  const clicks = `0.12*exp(-160*mod(t-2.5,0.085))*sin(2*PI*2300*mod(t-2.5,0.085))*gte(t-2.5,0)*lt(t-2.5,0.8)+0.10*exp(-160*mod(t-5.0,0.11))*sin(2*PI*2100*mod(t-5.0,0.11))*gte(t-5.0,0)*lt(t-5.0,0.7)`;
   const riser = `0.10*sin(2*PI*(280+900*min(gt(t-21.25,0)/1.25,1))*gt(t-21.25,0))*lt(t-21.25,1.25)*gte(t-21.25,0)*exp(-1.5*gt(t-21.25,0))`;
   const padExpr = `0.045*sin(2*PI*55*t)*sin(2*PI*0.05*t)+0.03*sin(2*PI*82.41*t)*sin(2*PI*0.033*t)+0.018*sin(2*PI*110*t)*sin(2*PI*0.021*t)`;
   const wav = path.join(OUT, 'sound.wav');
