@@ -369,28 +369,50 @@ window.renderFrame = function(tMs){
     const ox = (cx - sx) / sw * OUT_W;
     const oy = (cy - sy) / sh * OUT_H;
     const tight = !!seg.word;
-    const orad = (w * (tight ? 0.5 : 0.85)) / sw * OUT_W;
-    const gr = ctx.createRadialGradient(ox, oy, 0, ox, oy, orad);
-    gr.addColorStop(0, `rgba(${r},${g},${b},${(tight?0.6:0.62)*inten})`);
-    gr.addColorStop(0.45, `rgba(${r},${g},${b},${(tight?0.13:0.28)*inten})`);
-    gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
-    ctx.fillStyle = gr;
-    ctx.beginPath(); ctx.arc(ox, oy, orad, 0, 7); ctx.fill();
-    /* keycap top glow (tight) */
-    const kr = orad * (tight ? 0.36 : 0.52);
-    const kg = ctx.createRadialGradient(ox, oy, 0, ox, oy, kr);
-    kg.addColorStop(0, `rgba(${Math.min(255,r+70)},${Math.min(255,g+70)},${Math.min(255,b+70)},${(tight?0.8:0.5)*inten})`);
-    kg.addColorStop(1, `rgba(${r},${g},${b},0)`);
-    if (tight && inten > 0.5) {
-      const hr = kr * 0.3;
-      const hg = ctx.createRadialGradient(ox, oy, 0, ox, oy, hr);
-      hg.addColorStop(0, `rgba(255,255,240,${0.5*(inten-0.5)})`);
-      hg.addColorStop(1, 'rgba(255,255,240,0)');
-      ctx.fillStyle = hg;
-      ctx.beginPath(); ctx.arc(ox, oy, hr, 0, 7); ctx.fill();
-    }
+    const kw = (w * (tight ? 0.9 : 1.0)) / sw * OUT_W;
+    const kh = (CAL.capH * (tight ? 0.9 : 1.0)) / sh * OUT_H;
+    const rad = Math.min(kw,kh) * 0.22;
+    const rr = (x,y,ww,hh,r2) => { ctx.beginPath(); ctx.roundRect(x-ww/2, y-hh/2, ww, hh, r2); };
+
+    /* 1. cap body: white cap lit from beneath by its LED (clipped to cap shape) */
+    ctx.save();
+    rr(ox, oy, kw*0.98, kh*0.98, rad);
+    ctx.clip();
+    const kg = ctx.createRadialGradient(ox, oy, 0, ox, oy, Math.max(kw,kh)*0.62);
+    kg.addColorStop(0, `rgba(${r},${g},${b},${0.5*inten})`);
+    kg.addColorStop(0.55, `rgba(${r},${g},${b},${0.28*inten})`);
+    kg.addColorStop(1, `rgba(${r},${g},${b},${0.10*inten})`);
     ctx.fillStyle = kg;
-    ctx.beginPath(); ctx.arc(ox, oy, kr, 0, 7); ctx.fill();
+    ctx.fillRect(ox-kw, oy-kh, kw*2, kh*2);
+    /* 2. legend shine-through: small bright core at cap center */
+    const coreR = Math.min(kw,kh)*0.16;
+    const cg = ctx.createRadialGradient(ox, oy, 0, ox, oy, coreR);
+    cg.addColorStop(0, `rgba(255,255,250,${0.85*inten})`);
+    cg.addColorStop(0.6, `rgba(${Math.min(255,r+110)},${Math.min(255,g+110)},${Math.min(255,b+110)},${0.5*inten})`);
+    cg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(ox, oy, coreR, 0, 7); ctx.fill();
+    ctx.restore();
+
+    /* 3. side spill: light leaking from the gaps between caps */
+    ctx.save();
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.20*inten})`;
+    ctx.lineWidth = Math.max(3, kw*0.05);
+    ctx.shadowColor = `rgba(${r},${g},${b},${0.8*inten})`;
+    ctx.shadowBlur = 10;
+    rr(ox, oy, kw*1.02, kh*1.02, rad);
+    ctx.stroke();
+    ctx.restore();
+
+    /* 4. bloom above the cap for strong intensity */
+    if (inten > 0.4) {
+      const bR = Math.min(kw,kh)*0.75;
+      const bg = ctx.createRadialGradient(ox, oy-kh*0.42, 0, ox, oy-kh*0.42, bR);
+      bg.addColorStop(0, `rgba(${r},${g},${b},${0.22*(inten-0.4)})`);
+      bg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(ox, oy-kh*0.42, bR, 0, 7); ctx.fill();
+    }
   }
   /* deskmat spill: board glow reflects below the case */
   const bL = (CAL.x0 - 14 - sx) / sw * OUT_W;
