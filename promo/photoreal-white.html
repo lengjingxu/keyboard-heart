@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>keyboard-heart photoreal</title>
+<style>
+  html,body{margin:0;padding:0;background:#000;overflow:hidden}
+  #app{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100vw;height:100vh}
+  #overlay{position:fixed;inset:0;pointer-events:none;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+  .bar-cine{position:absolute;left:0;right:0;height:11vh;background:#000;z-index:6}
+  #barTop{top:0}#barBot{bottom:0}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(120,124,132,.18) 100%)}
+  #brand{position:absolute;left:4.2vw;top:14.5vh;color:#1d1d1f;text-shadow:0 2px 14px rgba(0,0,0,.8);z-index:7}
+  #brand .t{font-size:30px;font-weight:800;letter-spacing:1px}
+  #brand .t em{color:#ff3b5c;font-style:normal}
+  #brand .s{font-size:15px;color:#86868b;margin-top:4px;letter-spacing:.4px}
+  #caption{position:absolute;left:4.2vw;bottom:15.5vh;color:#1d1d1f;text-shadow:0 2px 14px rgba(0,0,0,.85);z-index:7}
+  #caption .name{font-size:38px;font-weight:700;letter-spacing:.5px}
+  #caption .desc{font-size:19px;color:#86868b;margin-top:6px}
+  #caption .en{font-size:14px;color:#a1a1a6;margin-top:4px;letter-spacing:.3px}
+  #fade{position:absolute;inset:0;background:#000;opacity:0;z-index:8}
+  #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         opacity:0;text-shadow:0 4px 30px rgba(0,0,0,.9);z-index:7}
+  #title .t{font-size:84px;font-weight:800;color:#1d1d1f;letter-spacing:2px}
+  #title .t em{color:#ff3b5c;font-style:normal}
+  #title .s{font-size:23px;color:#86868b;margin-top:14px;letter-spacing:.5px}
+  #title .u{font-size:18px;color:#a1a1a6;margin-top:16px}
+  #term{position:absolute;right:4vw;top:15vh;width:36vw;max-width:760px;opacity:0;z-index:7;
+        background:rgba(9,12,20,.88);border:1px solid rgba(110,135,180,.28);border-radius:12px;
+        box-shadow:0 18px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+        backdrop-filter: blur(4px); overflow:hidden}
+  #term .bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;
+             background:rgba(255,255,255,.045);border-bottom:1px solid rgba(255,255,255,.07)}
+  #term .dot{width:11px;height:11px;border-radius:50%}
+  #term .r{background:#ff5f57}#term .y{background:#febc2e}#term .g{background:#28c840}
+  #term .ttl{margin-left:8px;font-size:12.5px;color:#8b96ab;font-family:-apple-system,monospace;letter-spacing:.4px}
+  #tlog{margin:0;padding:16px 18px 18px;min-height:132px;font:13.5px/1.75 "SF Mono",Menlo,monospace;color:#c9d3e4;
+        white-space:pre-wrap;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #tlog .ok{color:#4ade80}#tlog .err{color:#f87171}#tlog .warn{color:#fbbf24}
+  #tlog .accent{color:#67e8f9}#tlog .dim{color:#66738a}#tlog .pink{color:#ff85a8}
+</style>
+</head>
+<body>
+<div id="app"><canvas id="cv"></canvas></div>
+<div id="overlay">
+  <div id="vignette"></div>
+  <div id="brand"><div class="t">keyboard<em>-</em>heart</div><div class="s">A keyboard status light for AI coding agents</div></div>
+  <div id="term"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">codex · agent session</span></div><pre id="tlog"></pre></div>
+  <div id="caption"><div class="name"></div><div class="desc"></div><div class="en"></div></div>
+  <div id="fade"></div>
+  <div id="title"><div class="t">keyboard<em>-</em>heart</div>
+    <div class="s">让 AI 在你的键盘上表达 · Let your AI speak in light</div>
+    <div class="u">github.com/lengjingxu/keyboard-heart</div></div>
+  
+</div>
+<script>
+/* ================= base photo + calibration ================= */
+const IMG_W = 1920, IMG_H = 1080;
+const BASE = new Image(); BASE.src = 'ai/flatlay_white.png';
+
+/* board calibration in image px: key grid bounding box
+   (tuned via ?debug=1 overlay — red rect per key) */
+const CAL = {
+  x0: 428,      // px of unit-x 0 (left edge of Esc keycap)
+  unit: 66.5,   // px per key unit
+  y0: 368,      // px of row-0 keycap top
+  pitch: 75.0,  // px per row
+  capH: 62      // keycap height px
+};
+
+/* real 65% geometry: [xCenter(units from row start), width] per key index */
+const GEO = (() => {
+  const g = new Array(68);
+  const put = (keys) => { let x = 0; for (const [i, w] of keys) { g[i] = [x + w/2, w]; x += w; } };
+  put([[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1],[13,2],[14,1]]);
+  g[14][0] = 15.75;
+  put([[15,1.5],[16,1],[17,1],[18,1],[19,1],[20,1],[21,1],[22,1],[23,1],[24,1],[25,1],[26,1],[27,1],[28,1.5],[29,1]]);
+  g[29][0] = 15.75;
+  put([[30,1.75],[31,1],[32,1],[33,1],[34,1],[35,1],[36,1],[37,1],[38,1],[39,1],[40,1],[41,1],[42,2.25],[43,1]]);
+  g[43][0] = 15.75;
+  put([[44,2.25],[45,1],[46,1],[47,1],[48,1],[49,1],[50,1],[51,1],[52,1],[53,1],[54,1],[55,1.75],[56,1],[57,1]]);
+  g[56][0] = 14.5; g[57][0] = 15.75;
+  put([[58,1.25],[59,1.25],[60,1.25],[61,6.25],[62,1.25],[63,1.25],[64,1.25],[65,1],[66,1],[67,1]]);
+  g[65][0] = 13.75+0.625; g[66][0] = 14.75+0.5; g[67][0] = 15.75+0.5;
+  return g;
+})();
+function keyRect(i){ // image-space center + size
+  const [xc, w] = GEO[i];
+  const row = Math.floor(i>=58 ? 4 : i>=44 ? 3 : i>=30 ? 2 : i>=15 ? 1 : 0);
+  const cx = CAL.x0 + xc*CAL.unit;
+  const cy = CAL.y0 + CAL.capH/2 + row*CAL.pitch;
+  return { cx, cy, w: w*CAL.unit*0.94, h: CAL.capH*0.92 };
+}
+
+/* ================= animation math (same as lib/animations.js) ================= */
+const KEY_NAMES = [
+ 'Esc','1','2','3','4','5','6','7','8','9','0','-','=','Backspace','Ins',
+ 'Tab','Q','W','E','R','T','Y','U','I','O','P','[',']','\\','PgUp',
+ 'CapsLock','A','S','D','F','G','H','J','K','L',';',"'",'Enter','PgDn',
+ 'LShift','Z','X','C','V','B','N','M',',','.','/','RShift','Up','Del',
+ 'LCtrl','LWin','LAlt','Space','RAlt','Fn','RCtrl','Left','Down','Right'];
+const KEY_POS = [ /* abstract anim grid */
+ [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0],[15,0],
+ [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1],[13,1],[15,1],
+ [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],[15,2],
+ [0,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[14,3],[15,3],
+ [0,4],[1,4],[2,4],[6,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4]];
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const gauss = (d, s) => Math.exp(-(d*d)/(2*s*s));
+const dist = (i,x0,y0) => Math.hypot(KEY_POS[i][0]-x0, KEY_POS[i][1]-y0);
+const maxDist = (x0,y0) => Math.max(...KEY_POS.map((_,i)=>dist(i,x0,y0)));
+const HEART_KEYS = ['4','5','7','8','E','R','T','Y','U','I','O','P','F','G','H','J','K','L','V','B','N','M'];
+const PERIMETER = (()=>{const p=[];for(let y=4;y>=0;y--)p.push([0,y]);for(let x=1;x<=15;x++)p.push([x,0]);for(let y=1;y<=4;y++)p.push([15,y]);for(let x=14;x>=1;x--)p.push([x,4]);return p;})();
+
+function frameAt(tMs, preset) {
+  const buf = new Array(68*3).fill(0);
+  const paint = (i, rgb, k) => { for (let c=0;c<3;c++) buf[i*3+c] = Math.max(buf[i*3+c], Math.round(rgb[c]*k)); };
+  if (preset==='success'){
+    const radius = clamp01(tMs/1400) * maxDist(0,4) * 1.3;
+    for (let i=0;i<68;i++){ const d=dist(i,0,4);
+      paint(i,[0,255,60], gauss(d-radius,0.55) + 0.5*gauss(d-(radius-0.95),0.6)); }
+  } else if (preset==='failure'){
+    const PULSE=850,GAP=80,CYCLE=PULSE+GAP,EXPAND=320,HOLD=180,MAX_R=4.2,PULSES=3;
+    const pulse=Math.floor(tMs/CYCLE); if(pulse>=PULSES) return buf;
+    const t=tMs%CYCLE; let radius;
+    if(t<EXPAND) radius=(t/EXPAND)*MAX_R;
+    else if(t<EXPAND+HOLD) radius=MAX_R;
+    else radius=Math.max(0,(1-(t-EXPAND-HOLD)/(PULSE-EXPAND-HOLD))*MAX_R);
+    for(let i=0;i<68;i++){ const d=dist(i,15,0);
+      if(d<=radius){ const edge=clamp01((radius-d)/1.1); const fall=0.9-0.45*Math.min(1,d/6);
+        paint(i,[255,30,20],fall*edge); } }
+  } else if (preset==='needInput'){
+    const STEP=100, GROW=STEP*4, HOLD=180, RETRACT=STEP*4;
+    const CYCLE=GROW+HOLD+RETRACT+700, t=tMs%CYCLE;
+    const rowsOf=y=>KEY_POS.map((p,i)=>[p[1],i]).filter(([yy])=>yy===y).map(([,i])=>i);
+    const paintRow=(y,v)=>rowsOf(y).forEach(i=>paint(i,[255,170,0],v));
+    const retractStart=GROW+HOLD;
+    const litRows=new Set();
+    if (t<retractStart){ const s=Math.floor(t/STEP); for(let k=0;k<=Math.min(s,3);k++) litRows.add(4-k); }
+    else if (t<retractStart+RETRACT){ for(let y=1;y<=4;y++) litRows.add(y);
+      const s=Math.floor((t-retractStart)/STEP); for(let k=0;k<=Math.min(s,3);k++) litRows.delete(1+k); }
+    else { const phase=(t-(retractStart+RETRACT))/(CYCLE-(retractStart+RETRACT));
+      paintRow(4, 0.15+0.5*(0.5-0.5*Math.cos(2*Math.PI*phase))); }
+    for(const y of litRows) paintRow(y,0.55);
+  } else if (preset==='processing'){
+    const lap=1100, head=((tMs%lap)/lap)*PERIMETER.length;
+    for(let tail=0;tail<6;tail++){
+      const idx=Math.floor(head-tail+PERIMETER.length)%PERIMETER.length;
+      const [x,y]=PERIMETER[idx], inten=(1-tail/6)*0.95;
+      KEY_POS.forEach((p,i)=>{ if(p[0]===x&&p[1]===y) paint(i,[0,220,255],inten); });
+    }
+  } else if (preset==='heartbeat'){
+    const period=1250,x=(tMs%period)/period;
+    const thump=u=>Math.exp(-((u-0.12)**2)/0.0016)+0.75*Math.exp(-((u-0.32)**2)/0.0025);
+    const k=Math.min(1,Math.max(0.15,thump(x)))*0.85;
+    HEART_KEYS.forEach(n=>{ const i=KEY_NAMES.indexOf(n); if(i>=0) paint(i,[255,0,0],k); });
+  }
+  return buf;
+}
+/* pixel font */
+const FONT = {
+  'D': ['##.','#.#','#.#','#.#','##.'],
+  'O': ['###','#.#','#.#','#.#','###'],
+  'N': ['#..#','##.#','#.##','#..#','#..#'],
+  'E': ['###','#..','##.','#..','###'],
+  '♥': ['.#.#.','#####','#####','.###.','..#..'],
+};
+function textFrame(word, tMs, rgb, opts = {}) {
+  const buf = new Array(68*3).fill(0);
+  const paint = (i,c,k) => { for(let q=0;q<3;q++) buf[i*3+q]=Math.max(buf[i*3+q],Math.round(c[q]*k)); };
+  const toks = [...word];
+  const totalW = toks.reduce((s,ch)=>s+FONT[ch][0].length+1,-1);
+  const startX = Math.floor((16-totalW)/2);
+  const perCol = opts.cascade ?? 70;
+  let gx = startX;
+  for (const ch of toks) {
+    const pat = FONT[ch];
+    for (let r=0;r<5;r++) for (let c=0;c<pat[r].length;c++){
+      if (pat[r][c] !== '#') continue;
+      const col = gx + c;
+      const i = KEY_POS.findIndex(p=>p[0]===col&&p[1]===r);
+      if (i<0) continue;
+      const reveal = 150 + col*perCol;
+      const a = clamp01((tMs-reveal)/200);
+      if (a<=0) continue;
+      let k = a * (0.82 + 0.18*Math.sin(tMs/260));
+      if (opts.thump){
+        const period=1250,x=(tMs%period)/period;
+        const thump=u=>Math.exp(-((u-0.12)**2)/0.0016)+0.75*Math.exp(-((u-0.32)**2)/0.0025);
+        k *= Math.min(1,Math.max(0.12,thump(x)));
+      }
+      paint(i, rgb, k);
+    }
+    gx += pat[0].length + 1;
+  }
+  return buf;
+}
+function bleed(buf, spill = 0.13){
+  const out = buf.slice();
+  const NB = [];
+  for (let i=0;i<68;i++){
+    const [x,y]=KEY_POS[i]; const arr=[];
+    for(let j=0;j<68;j++){ if(j===i) continue;
+      const d=Math.hypot(KEY_POS[j][0]-x,KEY_POS[j][1]-y);
+      if(d<=1.2) arr.push([j, Math.exp(-d*d/(2*0.42*0.42))]);
+    }
+    NB.push(arr);
+  }
+  for(let i=0;i<68;i++) for(let c=0;c<3;c++){
+    let s=0; for(const [j,w] of NB[i]) s += buf[j*3+c]*w;
+    out[i*3+c] = Math.min(255, buf[i*3+c] + s*spill);
+  }
+  return out;
+}
+
+/* ================= acts ================= */
+const SEG = [
+  { preset:null, dur:2500, zh:'', desc:'', en:'', term:'none', dark:true,
+    crop:[[150,60,1830,860],[170,50,1810,840],[150,60,1830,860],[170,50,1810,840]] },
+  { preset:'processing', dur:2500, zh:'codex · 接到任务', desc:'开始执行 —— 键盘进入工作状态', en:'task received — the board goes to work',
+    crop:[[400,190,1480,880],[380,170,1500,900],[360,160,1520,910],[390,180,1490,890]], term:'task' },
+  { preset:'processing', dur:2500, zh:'codex · 执行中', desc:'改代码、跑测试 —— 彗星跑马不停', en:'editing, testing — the comet keeps orbiting',
+    crop:[[520,180,1560,850],[560,160,1600,830],[620,170,1660,840],[560,190,1600,860]], term:'working' },
+  { preset:'success', dur:3750, zh:'success · 任务完成', desc:'终端全绿 —— 绿色冲击波扫过全板', en:'terminal all green — shockwave',
+    crop:[[360,180,1640,850],[340,160,1660,870],[380,170,1620,850],[360,190,1640,860]], term:'success' },
+  { word:'DONE', textRgb:[80,255,120], dur:3750, zh:'agent → keyboard', desc:'agent 直接在键盘上"写下"结果', en:'the agent writes its result in light',
+    crop:[[430,300,1500,830],[410,290,1520,850],[430,300,1500,830],[410,290,1520,850]], term:'done' },
+  { preset:'failure', dur:3750, zh:'failure · 任务失败', desc:'终端报错 —— 右上角红色脉冲 ×3', en:'error — red pulses from top-right',
+    crop:[[560,260,1560,810],[580,240,1580,790],[560,260,1560,810],[600,280,1540,800]], term:'error' },
+  { preset:'needInput', dur:3750, zh:'needInput · 等你批准', desc:'终端在问 —— 底行琥珀呼吸等你', en:'approval required — amber breathing',
+    crop:[[390,300,1470,860],[370,280,1490,880],[390,300,1470,860],[410,310,1450,850]], term:'approval' },
+  { word:'♥', textRgb:[255,30,60], dur:5000, zh:'agent → keyboard', desc:'任务收尾，agent 送你一颗像素心', en:'the agent sends you a heart', thump:true,
+    crop:[[440,290,1500,840],[420,280,1520,860],[440,290,1500,840],[420,280,1520,860]], term:'love' },
+  { preset:null, dur:3750, zh:'', desc:'', en:'', term:'none', endTitle:true,
+    crop:[[400,180,1520,850],[440,160,1560,830],[480,180,1600,850],[520,200,1640,870]] },
+];
+const TOTAL = SEG.reduce((s,x)=>s+x.dur, 0);
+const smooth = t => t*t*(3-2*t);
+const lerp = (a,b,t) => a+(b-a)*t;
+const lerp4 = (a,b,t) => [lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t), lerp(a[3],b[3],t)];
+
+const capEl = document.querySelector('#caption .name');
+const descEl = document.querySelector('#caption .desc');
+const enEl = document.querySelector('#caption .en');
+const titleEl = document.getElementById('title');
+const tlog = document.getElementById('tlog');
+const termEl = document.getElementById('term');
+const fadeEl = document.getElementById('fade');
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function terminalHTML(kind, t){
+  const cur = Math.floor(t/450)%2 ? '█' : ' ';
+  if (kind==='task'){
+    const typed = esc(`$ codex "ship the release"`.slice(0, Math.floor(t/34)));
+    let h = typed + (t<1400 ? cur : '');
+    if (t>1700) h += `\n<span class="dim">  · planning: 4 steps</span>`;
+    return h;
+  }
+  if (kind==='working'){
+    const sp = '⠋⠙⠹⠸⠼⠴⠦⠧'[Math.floor(t/110)%8];
+    let h = `<span class="accent">${sp}</span> editing src/api.ts …`;
+    if (t>1200) h += `\n<span class="ok">  128 passed · 0 failed</span>`;
+    return h;
+  }
+  if (kind==='success'){
+    let h = `<span class="ok">✔ build passed</span>`;
+    if (t>700) h += `\n<span class="ok">✔ 128 tests passed</span>`;
+    if (t>1500) h += `\n<span class="ok">✔ deployed in 3.2s</span>`;
+    return h;
+  }
+  if (kind==='done'){
+    let h = `<span class="dim">agent → keyboard:</span>`;
+    if (t>500) h += `\n<span class="ok">"D O N E"</span>`;
+    return h;
+  }
+  if (kind==='error'){
+    let h = `<span class="err">✖ test 47 failed</span>`;
+    if (t>600) h += `\n<span class="dim">  expect(200) → got 500</span>`;
+    if (t>1500) h += `\n<span class="err">✖ retry exhausted</span>`;
+    return h;
+  }
+  if (kind==='approval'){
+    let h = `<span class="warn">⚠ approval required</span>`;
+    if (t>700) h += `\ndeploy to production? (y/n) ${cur}`;
+    return h;
+  }
+  if (kind==='love'){
+    let h = `<span class="dim">agent → keyboard:</span>`;
+    if (t>600) h += `\n<span class="pink">❤</span>`;
+    return h;
+  }
+  return '';
+}
+
+function locate(tMs){
+  let acc = 0;
+  for (let s=0; s<SEG.length; s++){
+    const seg = SEG[s];
+    if (tMs < acc + seg.dur){
+      const segT = tMs - acc;
+      const p = smooth(segT / seg.dur);
+      return { seg, segT, p, index: s };
+    }
+    acc += seg.dur;
+  }
+  return null;
+}
+
+/* ================= canvas render ================= */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const OUT_W = 1920, OUT_H = 1080;
+cv.width = OUT_W; cv.height = OUT_H;
+
+/* clean watermark once: cover "AI生成" bottom-right with nearby desk pixels */
+const clean = document.createElement('canvas'); clean.width = IMG_W; clean.height = IMG_H;
+const grainCanvas = document.createElement('canvas'); grainCanvas.width = 256; grainCanvas.height = 256;
+{
+  const g2 = grainCanvas.getContext('2d');
+  const img2 = g2.createImageData(256, 256);
+  for (let i=0;i<img2.data.length;i+=4){
+    const v = 100 + Math.random()*110;
+    img2.data[i]=v; img2.data[i+1]=v; img2.data[i+2]=v; img2.data[i+3]=255;
+  }
+  g2.putImageData(img2,0,0);
+}
+
+window.renderFrame = function(tMs){
+  if (!BASE.complete || !BASE.naturalWidth) return;
+  if (!clean.__done){
+    const c2 = clean.getContext('2d');
+    c2.drawImage(BASE, 0, 0);
+    c2.drawImage(clean, 1330, 975, 320, 70, 1580, 975, 320, 70); // shift clean wood over watermark
+    c2.fillStyle = '#e9ebee'; c2.fillRect(1560, 970, 360, 90);
+    c2.filter = 'blur(0px)';
+    clean.__done = true;
+  }
+  const loc = locate(tMs % TOTAL);
+  if (!loc) return;
+  const { seg, segT, p } = loc;
+
+  /* Ken Burns crop */
+  const crop = lerp4(seg.crop[0], seg.crop[3], p);
+  let [sx, sy, sw, sh] = crop;
+  const AR = OUT_W / OUT_H;
+  sh = sw / AR;                        // enforce 16:9, no distortion
+  sy = Math.max(0, Math.min(sy, IMG_H - sh));
+  sx = Math.max(0, Math.min(sx, IMG_W - sw));
+  sw = Math.min(sw, IMG_W - sx);
+
+  ctx.drawImage(clean, sx, sy, sw, sh, 0, 0, OUT_W, OUT_H);
+
+  /* light animation mapped into crop space */
+  let raw;
+  if (seg.preset) raw = frameAt(segT, seg.preset);
+  else if (seg.word) raw = textFrame(seg.word, segT, seg.textRgb, { thump: !!seg.thump, fade: seg.wordFade });
+  else if (seg.dark) raw = new Array(68*3).fill(0);
+  else raw = frameAt((segT+400) % 1250, 'heartbeat');
+  const buf = bleed(raw, seg.word ? 0.06 : 0.13);
+
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i=0;i<68;i++){
+    const inten = Math.max(buf[i*3], buf[i*3+1], buf[i*3+2])/255;
+    if (inten < 0.03) continue;
+    const r = buf[i*3], g = buf[i*3+1], b = buf[i*3+2];
+    const { cx, cy, w } = keyRect(i);
+    /* map image px → output px through crop */
+    const ox = (cx - sx) / sw * OUT_W;
+    const oy = (cy - sy) / sh * OUT_H;
+    const tight = !!seg.word;
+    const orad = (w * (tight ? 0.5 : 0.85)) / sw * OUT_W;
+    const gr = ctx.createRadialGradient(ox, oy, 0, ox, oy, orad);
+    gr.addColorStop(0, `rgba(${r},${g},${b},${(tight?0.6:0.62)*inten})`);
+    gr.addColorStop(0.45, `rgba(${r},${g},${b},${(tight?0.13:0.28)*inten})`);
+    gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(ox, oy, orad, 0, 7); ctx.fill();
+    /* keycap top glow (tight) */
+    const kr = orad * (tight ? 0.36 : 0.52);
+    const kg = ctx.createRadialGradient(ox, oy, 0, ox, oy, kr);
+    kg.addColorStop(0, `rgba(${Math.min(255,r+70)},${Math.min(255,g+70)},${Math.min(255,b+70)},${(tight?0.8:0.5)*inten})`);
+    kg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    if (tight && inten > 0.5) {
+      const hr = kr * 0.3;
+      const hg = ctx.createRadialGradient(ox, oy, 0, ox, oy, hr);
+      hg.addColorStop(0, `rgba(255,255,240,${0.5*(inten-0.5)})`);
+      hg.addColorStop(1, 'rgba(255,255,240,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(ox, oy, hr, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = kg;
+    ctx.beginPath(); ctx.arc(ox, oy, kr, 0, 7); ctx.fill();
+  }
+  /* deskmat spill: board glow reflects below the case */
+  const bL = (CAL.x0 - 14 - sx) / sw * OUT_W;
+  const bR = (CAL.x0 + 17.4*CAL.unit - sx) / sw * OUT_W;
+  const bB = (CAL.y0 + 5*CAL.pitch + 26 - sy) / sh * OUT_H;
+  const bcx = (bL + bR) / 2, bw = bR - bL;
+  if (bw > 0 && bB > 0 && bB < OUT_H*1.3) {
+    const avg = [0,0,0]; let nn = 0;
+    for (let i=0;i<68;i++){ avg[0]+=buf[i*3]; avg[1]+=buf[i*3+1]; avg[2]+=buf[i*3+2]; nn++; }
+    const ai = Math.max(avg[0],avg[1],avg[2])/nn/255;
+    if (ai > 0.06) {
+      const cr = avg[0]/nn, cg = avg[1]/nn, cb = avg[2]/nn;
+      ctx.globalCompositeOperation = 'lighter';
+      const spg = ctx.createRadialGradient(bcx, bB, 0, bcx, bB, bw*0.62);
+      spg.addColorStop(0, `rgba(${cr|0},${cg|0},${cb|0},${0.22*ai})`);
+      spg.addColorStop(1, `rgba(${cr|0},${cg|0},${cb|0},0)`);
+      ctx.fillStyle = spg;
+      ctx.fillRect(bcx-bw*0.7, bB-40, bw*1.4, 260);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  /* animated film grain */
+  ctx.globalAlpha = 0.028;
+  ctx.globalCompositeOperation = 'overlay';
+  const goff = (tMs * 0.13) % 256;
+  ctx.drawImage(grainCanvas, goff, goff*0.7, 256, 256, 0, 0, OUT_W, OUT_H);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  /* terminal */
+  const termIn = clamp01(segT/300), termOut = clamp01((seg.dur-segT)/250);
+  termEl.style.opacity = (seg.term && seg.term !== 'none') ? Math.min(termIn, termOut) : 0;
+  if (seg.term) tlog.innerHTML = terminalHTML(seg.term, segT);
+
+  /* captions */
+  const capIn = clamp01(segT/260), capOut = clamp01((seg.dur-segT)/220);
+  const capA = seg.zh ? Math.min(capIn, capOut) : 0;
+  capEl.parentElement.style.opacity = capA;
+  capEl.parentElement.style.transform = `translateY(${(1-capIn)*14}px)`;
+  capEl.textContent = seg.zh || '';
+  descEl.textContent = seg.desc || '';
+  enEl.textContent = seg.en || '';
+
+  /* boundary crossfade */
+  const out = 1 - clamp01(segT/150);
+  const inn = 1 - clamp01((seg.dur-segT)/150);
+  fadeEl.style.opacity = Math.max(out, inn).toFixed(3);
+
+  titleEl.style.opacity = (seg.endTitle) ? clamp01((segT-600)/900) : 0;
+};
+
+window.__pollReady = function(){ return BASE.complete && !!window.renderFrame; };
+window.__total = TOTAL;
+</script>
+</body>
+</html>
