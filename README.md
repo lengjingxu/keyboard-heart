@@ -23,6 +23,20 @@
 <sub><strong>3D 宣传片</strong>：六个预设 × 电影运镜（25 秒，1080p）</sub>
 </div>
 
+## 宣传片
+
+两支 3D 合成宣传片（与真机同一套动画算法渲染）：
+
+| 版本 | 风格 | 文件 |
+|---|---|---|
+| 🤍 白·苹果风 | 白键银壳、纯白背景、彩色 LED 染色键帽 | [keyboard-heart-3d.mp4](promo/out/keyboard-heart-3d.mp4) · [GIF](promo/out/hero.gif) |
+| 🖤 暗·夜幕风 | 暗色木桌、夜色氛围、霓虹辉光 | 历史版本，可从提交记录取回 |
+
+<div align="center">
+<img src="promo/out/og.png" alt="DONE 像素字" width="640"><br>
+<sub>agent → keyboard: "D O N E"</sub>
+</div>
+
 ## 30 秒接入你的 AI
 
 **Codex**（`~/.codex/hooks.json`，推荐）：

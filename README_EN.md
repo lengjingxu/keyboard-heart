@@ -23,6 +23,20 @@ Raw per-key REST + WebSocket control is open to any script.
 <sub><strong>3D promo</strong>: six presets × cinematic camera (25 s, 1080p)</sub>
 </div>
 
+## Promo videos
+
+Two 3D-rendered promos (rendered with the exact animation math of the real device):
+
+| Edition | Style | Files |
+|---|---|---|
+| 🤍 White · Apple style | white/silver board, seamless light studio, colored LED tint | [keyboard-heart-3d.mp4](promo/out/keyboard-heart-3d.mp4) · [GIF](promo/out/hero.gif) |
+| 🖤 Dark · night | walnut desk, moody night, neon bloom | in git history |
+
+<div align="center">
+<img src="promo/out/og.png" alt="DONE pixel text" width="640"><br>
+<sub>agent → keyboard: "D O N E"</sub>
+</div>
+
 ## Wire up your AI in 30 seconds
 
 **Codex** (`~/.codex/hooks.json`, recommended):
